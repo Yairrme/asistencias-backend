@@ -3,23 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <title>Sistema de Asistencias</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background: #f7f7f7; }
-    h1 { color: #333; }
-    table { border-collapse: collapse; width: 100%; margin-top: 20px; background: white; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-    th { background: #eee; }
-    form { margin-top: 20px; background: #fff; padding: 15px; border: 1px solid #ccc; }
-    label { display: block; margin-top: 10px; }
-    select, input, button { padding: 6px; margin-top: 5px; width: 100%; }
-    button { margin-top: 15px; background: #007bff; color: white; border: none; cursor: pointer; }
-    button:hover { background: #0056b3; }
-  </style>
+  
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <h1>Sistema de Asistencias</h1>
 
-  <!-- Tabla de asistencias -->
   <h2>Listado de Asistencias</h2>
   <button onclick="cargarAsistencias()">Actualizar</button>
   <table id="tabla-asistencias">
@@ -32,10 +21,10 @@
         <th>Estado</th>
       </tr>
     </thead>
-    <tbody></tbody>
+    <tbody>
+      </tbody>
   </table>
 
-  <!-- Formulario para agregar asistencia -->
   <h2>Registrar Asistencia</h2>
   <form id="form-asistencia">
     <label>Alumno:
@@ -55,6 +44,7 @@
   </form>
 
   <script>
+    // URL base de tu API, apunta al endpoint de asistencias
     const API_URL = "http://localhost:3000/asistencias";
 
     // Cargar asistencias en la tabla
@@ -62,7 +52,8 @@
       const res = await fetch(`${API_URL}/all`);
       const data = await res.json();
       const tbody = document.querySelector("#tabla-asistencias tbody");
-      tbody.innerHTML = "";
+      tbody.innerHTML = ""; // Limpiar filas anteriores
+      
       data.forEach(a => {
         const row = `
           <tr>
@@ -77,9 +68,10 @@
       });
     }
 
-    // Cargar alumnos
+    // Cargar alumnos en el select del formulario
     async function cargarAlumnos() {
-      const res = await fetch("http://localhost:3000/alumnos"); // necesitas endpoint alumnos
+      // Nota: necesitas tener este endpoint en tu backend
+      const res = await fetch("http://localhost:3000/alumnos"); 
       const data = await res.json();
       const select = document.querySelector("#alumno_id");
       select.innerHTML = "";
@@ -88,45 +80,52 @@
       });
     }
 
-    // Cargar clases
-  async function cargarClases() {
-  try {
-    const res = await fetch("http://localhost:3000/clases");
-    const data = await res.json();
-    const select = document.querySelector("#clase_id");
-    select.innerHTML = "";
-    data.forEach(cl => {
-      select.innerHTML += `<option value="${cl.id}">${cl.materia} - ${cl.fecha}</option>`;
-    });
-  } catch (err) {
-    console.error("Error cargando clases:", err);
-  }
-}
+    // Cargar clases en el select del formulario
+    async function cargarClases() {
+      try {
+        const res = await fetch("http://localhost:3000/clases");
+        const data = await res.json();
+        const select = document.querySelector("#clase_id");
+        select.innerHTML = "";
+        data.forEach(cl => {
+          select.innerHTML += `<option value="${cl.id}">${cl.materia} - ${cl.fecha}</option>`;
+        });
+      } catch (err) {
+        console.error("Error cargando clases:", err);
+      }
+    }
 
-window.onload = () => {
-  cargarAlumnos();
-  cargarClases();
-};
+    // Esta función se ejecuta cuando la página termina de cargar
+    window.onload = () => {
+      cargarAlumnos();
+      cargarClases();
+      cargarAsistencias(); // Cargar asistencias al inicio
+    };
 
-    // Agregar nueva asistencia
+    // Agregar nueva asistencia: Maneja el envío del formulario
     document.querySelector("#form-asistencia").addEventListener("submit", async (e) => {
-      e.preventDefault();
+      e.preventDefault(); // Evitar que el formulario recargue la página
+      
+      // Obtener valores del formulario
       const alumno_id = document.querySelector("#alumno_id").value;
       const clase_id = document.querySelector("#clase_id").value;
       const estado = document.querySelector("#estado").value;
 
+      // Petición POST a la API para registrar la asistencia
       const res = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ alumno_id, clase_id, estado })
       });
+      
       const result = await res.json();
-      alert(result.message);
-      cargarAsistencias();
+      alert(result.message); // Mostrar mensaje de éxito o error
+      cargarAsistencias(); // Recargar la tabla para mostrar la nueva asistencia
     });
 
-    // Inicializar
-    cargarAsistencias();
+    // Inicialización inicial, aunque ya la tienes en window.onload, 
+    // la dejaremos aquí por si quieres llamarlas antes
+    cargarAsistencias(); 
     cargarAlumnos();
     cargarClases();
   </script>

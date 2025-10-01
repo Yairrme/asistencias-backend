@@ -1,0 +1,79 @@
+/* ==================================== */
+/* ESTILOS GLOBALES            */
+/* ==================================== */
+
+/* Estilos aplicados al cuerpo de la página (fondo, tipografía, márgenes) */
+body { 
+    font-family: Arial, sans-serif; /* Fuente base */
+    margin: 20px; /* Margen alrededor del contenido */
+    background: #f7f7f7; /* Color de fondo gris claro para la página */
+}
+
+/* Estilo para los títulos principales (H1) */
+h1 { 
+    color: #333; /* Color de texto gris oscuro */
+}
+
+/* ==================================== */
+/* ESTILOS DE TABLA          */
+/* ==================================== */
+
+/* Estilos para el contenedor de la tabla */
+table { 
+    border-collapse: collapse; /* Unir bordes de celdas */
+    width: 100%; /* Ocupar todo el ancho disponible */
+    margin-top: 20px; /* Separación superior */
+    background: white; /* Fondo blanco para la tabla */
+}
+
+/* Estilos para celdas de encabezado (th) y celdas de datos (td) */
+th, td { 
+    border: 1px solid #ccc; /* Borde gris claro */
+    padding: 8px; /* Espaciado interno */
+    text-align: left; /* Alinear texto a la izquierda */
+}
+
+/* Estilo específico para los encabezados de columna (th) */
+th { 
+    background: #eee; /* Color de fondo gris muy claro para diferenciar */
+}
+
+/* ==================================== */
+/* ESTILOS DE FORMULARIO       */
+/* ==================================== */
+
+/* Estilo para el contenedor del formulario */
+form { 
+    margin-top: 20px; /* Separación superior */
+    background: #fff; /* Fondo blanco */
+    padding: 15px; /* Espaciado interno */
+    border: 1px solid #ccc; /* Borde simple gris claro */
+}
+
+/* Estilo para las etiquetas (Label) de los campos */
+label { 
+    display: block; /* Ocupar todo el ancho y forzar salto de línea */
+    margin-top: 10px; /* Espacio entre campos */
+}
+
+/* Estilo para campos de selección (select), entrada (input) y botones */
+select, input, button { 
+    padding: 6px; /* Espaciado interno */
+    margin-top: 5px; /* Separación de la etiqueta */
+    width: 100%; /* Ocupar todo el ancho del contenedor */
+    /* Nota: el estilo del botón se sobrescribe a continuación para darle color */
+}
+
+/* Estilo específico para el botón de envío */
+button { 
+    margin-top: 15px; /* Más separación superior */
+    background: #007bff; /* Color de fondo azul (típico de un botón principal) */
+    color: white; /* Texto blanco */
+    border: none; /* Sin borde */
+    cursor: pointer; /* Cambiar el cursor a una mano */
+}
+
+/* Estilo para el botón cuando el usuario pasa el ratón por encima (hover) */
+button:hover { 
+    background: #0056b3; /* Un tono de azul más oscuro para el efecto visual */
+}
