@@ -54,7 +54,7 @@ CREATE TABLE `asistencias` (
   `alumno_id` int(11) DEFAULT NULL,
   `clase_id` int(11) DEFAULT NULL,
   `estado` enum('Presente','Ausente','Tarde') DEFAULT NULL,
-  `fecha_registro` timestamp NOT NULL DEFAULT current_timestamp()
+  `fecha_registro` date NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -62,12 +62,12 @@ CREATE TABLE `asistencias` (
 --
 
 INSERT INTO `asistencias` (`id`, `alumno_id`, `clase_id`, `estado`, `fecha_registro`) VALUES
-(1, 1, 1, 'Tarde', '2025-09-24 03:38:21'),
-(2, 1, 12, 'Presente', '2025-10-01 17:57:01'),
-(3, 4, 12, 'Tarde', '2025-10-01 17:58:30'),
-(4, 1, 12, 'Presente', '2025-10-01 17:59:14'),
-(5, 2, 12, 'Presente', '2025-10-01 17:59:23'),
-(6, 2, 11, 'Tarde', '2025-10-01 22:12:56');
+(1, 1, 1, 'Tarde', '2025-09-24'),
+(2, 1, 12, 'Presente', '2025-10-01'),
+(3, 4, 12, 'Tarde', '2025-10-01'),
+(4, 1, 12, 'Presente', '2025-10-01'),
+(5, 2, 12, 'Presente', '2025-10-01'),
+(6, 2, 11, 'Tarde', '2025-10-01');
 
 -- --------------------------------------------------------
 
