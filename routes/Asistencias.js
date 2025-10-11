@@ -138,6 +138,29 @@ router.get('/ausentes/:claseId', (req, res) => {
   });
 });
 
+// 5. Asistencias del alumno logueado (usando token)
+const { verificarToken } = require("./auth"); // 👈 importamos el middleware del login
+
+router.get("/mias", verificarToken, (req, res) => {
+  const alumnoId = req.user.id; // viene del token JWT
+  const sql = `
+    SELECT a.id, m.nombre AS materia, c.fecha, a.estado
+    FROM asistencias a
+    JOIN clases c ON a.clase_id = c.id
+    JOIN materias m ON c.materia_id = m.id
+    WHERE a.alumno_id = ?
+    ORDER BY c.fecha DESC;
+  `;
+  db.query(sql, [alumnoId], (err, results) => {
+    if (err) {
+      console.error("Error en /asistencias/mias:", err);
+      return res.status(500).json({ message: "Error obteniendo asistencias del alumno" });
+    }
+    res.json(results);
+  });
+});
+
+
 module.exports = router;
 // ==================================
 // ==================
