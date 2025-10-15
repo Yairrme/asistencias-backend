@@ -2,15 +2,15 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Asistencias - Alumno</title>
+  <title>Mis Asistencias - Alumno</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <h1>Bienvenido Alumno</h1>
+  <h1>Bienvenido, Alumno 👨‍🎓</h1>
   <button id="logout">Cerrar sesión</button>
 
   <h2>Mis Asistencias</h2>
-  <button onclick="cargarMisAsistencias()">Actualizar</button>
+  <button onclick="cargarMisAsistencias()">🔄 Actualizar</button>
 
   <table id="tabla-asistencias">
     <thead>
@@ -26,35 +26,42 @@
   <script>
     const API_URL = "http://localhost:3000/asistencias";
     const token = sessionStorage.getItem("token");
+    const tipo = sessionStorage.getItem("tipo");
 
-    // Si no hay sesión, redirigir
+    // 🔒 Verificación de sesión y tipo de usuario
     if (!token) {
+      alert("Debes iniciar sesión primero.");
       window.location.href = "login.html";
+    } else if (tipo !== "alumno") {
+      alert("Acceso denegado. Solo los alumnos pueden ver esta página.");
+      window.location.href = "index.html";
     }
 
-    // Botón de cerrar sesión
+    // 🔘 Cerrar sesión
     document.getElementById("logout").addEventListener("click", () => {
       sessionStorage.clear();
       window.location.href = "login.html";
     });
 
-    // Cargar asistencias del alumno
+    // 📋 Cargar asistencias del alumno logueado
     async function cargarMisAsistencias() {
       try {
         const res = await fetch(`${API_URL}/mias`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
+
         if (res.status === 401) {
           alert("Sesión expirada. Iniciá sesión nuevamente.");
           sessionStorage.clear();
           window.location.href = "login.html";
           return;
         }
+
         const data = await res.json();
         const tbody = document.querySelector("#tabla-asistencias tbody");
         tbody.innerHTML = "";
 
-        if (data.length === 0) {
+        if (!data || data.length === 0) {
           tbody.innerHTML = `<tr><td colspan="3">No hay asistencias registradas.</td></tr>`;
           return;
         }
@@ -62,8 +69,8 @@
         data.forEach(a => {
           const row = `
             <tr>
-              <td>${a.materia}</td>
-              <td>${a.fecha}</td>
+              <td>${a.materia || "Sin materia"}</td>
+              <td>${new Date(a.fecha).toLocaleDateString()}</td>
               <td>${a.estado}</td>
             </tr>
           `;
@@ -71,9 +78,11 @@
         });
       } catch (err) {
         console.error("Error cargando asistencias:", err);
+        alert("Error al cargar tus asistencias.");
       }
     }
 
+    // 🚀 Cargar al entrar
     window.onload = cargarMisAsistencias;
   </script>
 </body>

@@ -59,7 +59,18 @@ router.post("/register", async (req, res) => {
       console.error(err);
       return res.status(500).json({ success: false, message: "Error al registrar usuario" });
     }
-    res.json({ success: true, message: "Usuario registrado correctamente" });
+
+    const nuevoUsuarioId = result.insertId;
+
+    // Vincular el usuario automáticamente según su tipo
+    if (tipo === "alumno") {
+      db.query("INSERT INTO alumnos (nombre, usuario_id) VALUES (?, ?)", [nombre, nuevoUsuarioId]);
+    } else if (tipo === "profesor") {
+      db.query("INSERT INTO docentes (nombre, usuario_id) VALUES (?, ?)", [nombre, nuevoUsuarioId]);
+    }
+
+
+    res.json({ success: true, message: "Usuario registrado correctamente y vinculado correctamente" });
   });
 });
 

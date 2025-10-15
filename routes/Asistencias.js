@@ -1,19 +1,26 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const db = require('../db'); // conexión a MySQL
+const db = require("../db");
+const { verificarToken } = require("./auth"); // Middleware del login
 
-// ✅ Probar que funciona
-router.get('/', (req, res) => {
+// ===============================
+// ✅ Ruta de prueba
+// ===============================
+router.get("/", (req, res) => {
   res.json({ message: "Ruta de asistencias funcionando 🚀" });
 });
 
-
-// ==================
+// ===============================
 // 📌 CRUD BÁSICO
-// ==================
+// ===============================
 
-// Obtener todas las asistencias
-router.get('/all', (req, res) => {
+// 🔹 Obtener todas las asistencias (PROFESOR)
+router.get("/all", verificarToken, (req, res) => {
+  // Solo los profesores deberían acceder
+  if (req.user.tipo !== "profesor") {
+    return res.status(403).json({ message: "Acceso denegado: solo profesores" });
+  }
+
   const sql = `
     SELECT a.id, al.nombre, al.apellido, m.nombre AS materia, c.fecha, a.estado, a.fecha_registro
     FROM asistencias a
@@ -22,88 +29,95 @@ router.get('/all', (req, res) => {
     JOIN materias m ON c.materia_id = m.id
     ORDER BY c.fecha DESC;
   `;
+
   db.query(sql, (err, results) => {
-    if (err) return res.status(500).json(err);
+    if (err) return res.status(500).json({ message: "Error en la base de datos" });
     res.json(results);
   });
 });
 
-// Crear asistencia
-router.post('/', (req, res) => {
+// 🔹 Crear una asistencia (PROFESOR)
+router.post("/", verificarToken, (req, res) => {
+  if (req.user.tipo !== "profesor") {
+    return res.status(403).json({ message: "Acceso denegado: solo profesores" });
+  }
+
   const { alumno_id, clase_id, estado } = req.body;
   if (!alumno_id || !clase_id || !estado) {
-    return res.status(400).json({ error: "Faltan datos" });
+    return res.status(400).json({ message: "Faltan datos" });
   }
+
   const sql = "INSERT INTO asistencias (alumno_id, clase_id, estado) VALUES (?, ?, ?)";
   db.query(sql, [alumno_id, clase_id, estado], (err, result) => {
-    if (err) return res.status(500).json(err);
+    if (err) return res.status(500).json({ message: "Error al registrar asistencia" });
     res.json({ message: "Asistencia registrada ✅", id: result.insertId });
   });
 });
 
-// Actualizar asistencia
-router.put('/:id', (req, res) => {
+// 🔹 Actualizar una asistencia (PROFESOR)
+router.put("/:id", verificarToken, (req, res) => {
+  if (req.user.tipo !== "profesor") {
+    return res.status(403).json({ message: "Acceso denegado: solo profesores" });
+  }
+
   const { id } = req.params;
   const { estado } = req.body;
   const sql = "UPDATE asistencias SET estado = ? WHERE id = ?";
+
   db.query(sql, [estado, id], (err) => {
-    if (err) return res.status(500).json(err);
+    if (err) return res.status(500).json({ message: "Error al actualizar asistencia" });
     res.json({ message: "Asistencia actualizada ✏️" });
   });
 });
 
-// Eliminar asistencia
-router.delete('/:id', (req, res) => {
+// 🔹 Eliminar una asistencia (PROFESOR)
+router.delete("/:id", verificarToken, (req, res) => {
+  if (req.user.tipo !== "profesor") {
+    return res.status(403).json({ message: "Acceso denegado: solo profesores" });
+  }
+
   const { id } = req.params;
   const sql = "DELETE FROM asistencias WHERE id = ?";
+
   db.query(sql, [id], (err) => {
-    if (err) return res.status(500).json(err);
+    if (err) return res.status(500).json({ message: "Error al eliminar asistencia" });
     res.json({ message: "Asistencia eliminada 🗑️" });
   });
 });
 
+// ===============================
+// 📌 RUTAS ESPECIALES
+// ===============================
 
-// ==================
-// 📌 CONSULTAS ESPECIALES
-// ==================
+// 🔹 Asistencias del alumno logueado (ALUMNO)
+router.get("/mias", verificarToken, (req, res) => {
+  if (req.user.tipo !== "alumno") {
+    return res.status(403).json({ message: "Acceso denegado: solo alumnos" });
+  }
 
-// 1. Todas las asistencias de un alumno
-router.get('/alumno/:alumnoId', (req, res) => {
-  const { alumnoId } = req.params;
+  const usuarioId = req.user.id; // viene del token JWT
+
   const sql = `
-    SELECT al.nombre, al.apellido, m.nombre AS materia, c.fecha, a.estado
+    SELECT a.id, m.nombre AS materia, c.fecha, a.estado
     FROM asistencias a
     JOIN alumnos al ON a.alumno_id = al.id
     JOIN clases c ON a.clase_id = c.id
     JOIN materias m ON c.materia_id = m.id
-    WHERE al.id = ?
-    ORDER BY c.fecha;
+    WHERE al.usuario_id = ?
+    ORDER BY c.fecha DESC;
   `;
-  db.query(sql, [alumnoId], (err, results) => {
-    if (err) return res.status(500).json(err);
+
+  db.query(sql, [usuarioId], (err, results) => {
+    if (err) {
+      console.error("Error en /asistencias/mias:", err);
+      return res.status(500).json({ message: "Error obteniendo asistencias del alumno" });
+    }
     res.json(results);
   });
 });
 
-// 2. Resumen de asistencias por clase
-router.get('/resumen/:claseId', (req, res) => {
-  const { claseId } = req.params;
-  const sql = `
-    SELECT c.fecha, m.nombre AS materia, a.estado, COUNT(*) AS cantidad
-    FROM asistencias a
-    JOIN clases c ON a.clase_id = c.id
-    JOIN materias m ON c.materia_id = m.id
-    WHERE c.id = ?
-    GROUP BY c.fecha, m.nombre, a.estado;
-  `;
-  db.query(sql, [claseId], (err, results) => {
-    if (err) return res.status(500).json(err);
-    res.json(results);
-  });
-});
-
-// 3. Porcentaje de asistencia de un alumno en una materia
-router.get('/porcentaje/:alumnoId/:materiaId', (req, res) => {
+// 🔹 Porcentaje de asistencia de un alumno en una materia
+router.get("/porcentaje/:alumnoId/:materiaId", verificarToken, (req, res) => {
   const { alumnoId, materiaId } = req.params;
   const sql = `
     SELECT al.nombre, al.apellido, m.nombre AS materia,
@@ -118,13 +132,17 @@ router.get('/porcentaje/:alumnoId/:materiaId', (req, res) => {
     GROUP BY al.nombre, al.apellido, m.nombre;
   `;
   db.query(sql, [alumnoId, materiaId], (err, results) => {
-    if (err) return res.status(500).json(err);
+    if (err) return res.status(500).json({ message: "Error obteniendo porcentaje" });
     res.json(results);
   });
 });
 
-// 4. Alumnos ausentes en una clase
-router.get('/ausentes/:claseId', (req, res) => {
+// 🔹 Alumnos ausentes en una clase (solo profesor)
+router.get("/ausentes/:claseId", verificarToken, (req, res) => {
+  if (req.user.tipo !== "profesor") {
+    return res.status(403).json({ message: "Acceso denegado: solo profesores" });
+  }
+
   const { claseId } = req.params;
   const sql = `
     SELECT al.nombre, al.apellido, a.estado
@@ -133,34 +151,9 @@ router.get('/ausentes/:claseId', (req, res) => {
     WHERE a.clase_id = ? AND a.estado = 'Ausente';
   `;
   db.query(sql, [claseId], (err, results) => {
-    if (err) return res.status(500).json(err);
+    if (err) return res.status(500).json({ message: "Error obteniendo ausentes" });
     res.json(results);
   });
 });
-
-// 5. Asistencias del alumno logueado (usando token)
-const { verificarToken } = require("./auth"); // 👈 importamos el middleware del login
-
-router.get("/mias", verificarToken, (req, res) => {
-  const alumnoId = req.user.id; // viene del token JWT
-  const sql = `
-    SELECT a.id, m.nombre AS materia, c.fecha, a.estado
-    FROM asistencias a
-    JOIN clases c ON a.clase_id = c.id
-    JOIN materias m ON c.materia_id = m.id
-    WHERE a.alumno_id = ?
-    ORDER BY c.fecha DESC;
-  `;
-  db.query(sql, [alumnoId], (err, results) => {
-    if (err) {
-      console.error("Error en /asistencias/mias:", err);
-      return res.status(500).json({ message: "Error obteniendo asistencias del alumno" });
-    }
-    res.json(results);
-  });
-});
-
 
 module.exports = router;
-// ==================================
-// ==================

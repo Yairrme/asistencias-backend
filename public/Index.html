@@ -3,11 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <title>Sistema de Asistencias</title>
-  
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <h1>Sistema de Asistencias</h1>
+
+<button id="logout">Cerrar sesión</button>
 
   <h2>Listado de Asistencias</h2>
   <button onclick="cargarAsistencias()">Actualizar</button>
@@ -21,11 +22,10 @@
         <th>Estado</th>
       </tr>
     </thead>
-    <tbody>
-    </tbody>
+    <tbody></tbody>
   </table>
 
-  <h2>Registrar Asistencia</h2>
+  <h2 id="titulo-form">Registrar Asistencia</h2>
   <form id="form-asistencia">
     <label>Alumno:
       <select id="alumno_id"></select>
@@ -40,28 +40,29 @@
         <option value="Tarde">Tarde</option>
       </select>
     </label>
-    <button type="submit"> Agregar</button>
+    <button type="submit">Agregar</button>
   </form>
 
   <script>
     const API_URL = "http://localhost:3000/asistencias";
     const token = sessionStorage.getItem("token");
+    const tipoUsuario = sessionStorage.getItem("tipo");
 
     // ❌ Redirige al login si no hay token
-    if (!token) {
-      window.location.href = "login.html";
+    if (!token) window.location.href = "login.html";
+
+    // Ajustar UI según tipo de usuario
+    if (tipoUsuario === "alumno") {
+      // Los alumnos NO pueden registrar asistencias
+      document.getElementById("form-asistencia").style.display = "none";
+      document.getElementById("titulo-form").style.display = "none";
     }
 
-    // Detectar tipo de usuario y redirigir si es alumno
-const tipoUsuario = sessionStorage.getItem("tipo");
-if (tipoUsuario === "alumno") {
-  window.location.href = "alumno.html";
-}
-
-    // Cargar asistencias en la tabla
+    // Cargar asistencias según tipo
     async function cargarAsistencias() {
+      let endpoint = tipoUsuario === "profesor" ? "/all" : "/mias";
       try {
-        const res = await fetch(`${API_URL}/all`, {
+        const res = await fetch(`${API_URL}${endpoint}`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (res.status === 401) {
@@ -71,27 +72,25 @@ if (tipoUsuario === "alumno") {
         }
         const data = await res.json();
         const tbody = document.querySelector("#tabla-asistencias tbody");
-        tbody.innerHTML = ""; // Limpiar filas anteriores
-        
+        tbody.innerHTML = "";
         data.forEach(a => {
-          const row = `
+          tbody.innerHTML += `
             <tr>
-              <td>${a.id}</td>
-              <td>${a.nombre} ${a.apellido}</td>
+              <td>${a.id || "-"}</td>
+              <td>${a.nombre || "-"} ${a.apellido || ""}</td>
               <td>${a.materia}</td>
               <td>${a.fecha}</td>
               <td>${a.estado}</td>
-            </tr>
-          `;
-          tbody.innerHTML += row;
+            </tr>`;
         });
       } catch (err) {
         console.error("Error cargando asistencias:", err);
       }
     }
 
-    // Cargar alumnos en el select del formulario
+    // Funciones solo para profesores
     async function cargarAlumnos() {
+      if (tipoUsuario !== "profesor") return;
       try {
         const res = await fetch("http://localhost:3000/alumnos", {
           headers: { "Authorization": `Bearer ${token}` }
@@ -102,13 +101,11 @@ if (tipoUsuario === "alumno") {
         data.forEach(al => {
           select.innerHTML += `<option value="${al.id}">${al.nombre} ${al.apellido}</option>`;
         });
-      } catch (err) {
-        console.error("Error cargando alumnos:", err);
-      }
+      } catch (err) { console.error(err); }
     }
 
-    // Cargar clases en el select del formulario
     async function cargarClases() {
+      if (tipoUsuario !== "profesor") return;
       try {
         const res = await fetch("http://localhost:3000/clases", {
           headers: { "Authorization": `Bearer ${token}` }
@@ -119,14 +116,14 @@ if (tipoUsuario === "alumno") {
         data.forEach(cl => {
           select.innerHTML += `<option value="${cl.id}">${cl.materia} - ${cl.fecha}</option>`;
         });
-      } catch (err) {
-        console.error("Error cargando clases:", err);
-      }
+      } catch (err) { console.error(err); }
     }
 
-    // Maneja envío del formulario
+    // Registro de asistencias solo para profesores
     document.querySelector("#form-asistencia").addEventListener("submit", async (e) => {
       e.preventDefault();
+      if (tipoUsuario !== "profesor") return;
+
       const alumno_id = document.querySelector("#alumno_id").value;
       const clase_id = document.querySelector("#clase_id").value;
       const estado = document.querySelector("#estado").value;
@@ -134,33 +131,28 @@ if (tipoUsuario === "alumno") {
       try {
         const res = await fetch(API_URL, {
           method: "POST",
-          headers: { 
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
-          },
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
           body: JSON.stringify({ alumno_id, clase_id, estado })
         });
-
-        if (res.status === 401) {
-          alert("Sesión expirada. Iniciá sesión nuevamente.");
-          window.location.href = "login.html";
-          return;
-        }
-
         const result = await res.json();
         alert(result.message);
         cargarAsistencias();
-      } catch (err) {
-        console.error("Error registrando asistencia:", err);
-      }
+      } catch (err) { console.error(err); }
     });
 
     // Inicialización
     window.onload = () => {
+      cargarAsistencias();
       cargarAlumnos();
       cargarClases();
-      cargarAsistencias();
     };
+    
+    // === Cerrar sesión ===
+    document.getElementById("logout").addEventListener("click", () => {
+  sessionStorage.clear();
+  alert("Sesión cerrada correctamente.");
+  window.location.href = "login.html";
+});
   </script>
 </body>
 </html>
