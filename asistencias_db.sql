@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 02-10-2025 a las 00:18:42
+-- Tiempo de generación: 15-10-2025 a las 15:06:38
 -- Versión del servidor: 10.4.32-MariaDB
 -- Versión de PHP: 8.0.30
 
@@ -54,7 +54,7 @@ CREATE TABLE `asistencias` (
   `alumno_id` int(11) DEFAULT NULL,
   `clase_id` int(11) DEFAULT NULL,
   `estado` enum('Presente','Ausente','Tarde') DEFAULT NULL,
-  `fecha_registro` date NOT NULL DEFAULT current_timestamp()
+  `fecha_registro` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -62,12 +62,14 @@ CREATE TABLE `asistencias` (
 --
 
 INSERT INTO `asistencias` (`id`, `alumno_id`, `clase_id`, `estado`, `fecha_registro`) VALUES
-(1, 1, 1, 'Tarde', '2025-09-24'),
-(2, 1, 12, 'Presente', '2025-10-01'),
-(3, 4, 12, 'Tarde', '2025-10-01'),
-(4, 1, 12, 'Presente', '2025-10-01'),
-(5, 2, 12, 'Presente', '2025-10-01'),
-(6, 2, 11, 'Tarde', '2025-10-01');
+(1, 1, 1, 'Tarde', '2025-09-24 03:38:21'),
+(2, 1, 12, 'Presente', '2025-10-01 17:57:01'),
+(3, 4, 12, 'Tarde', '2025-10-01 17:58:30'),
+(4, 1, 12, 'Presente', '2025-10-01 17:59:14'),
+(5, 2, 12, 'Presente', '2025-10-01 17:59:23'),
+(6, 2, 11, 'Tarde', '2025-10-01 22:12:56'),
+(7, 3, 3, 'Presente', '2025-10-01 22:30:13'),
+(8, 2, 8, 'Tarde', '2025-10-08 23:36:58');
 
 -- --------------------------------------------------------
 
@@ -96,11 +98,7 @@ INSERT INTO `clases` (`id`, `materia_id`, `fecha`) VALUES
 (9, 1, '2025-03-24'),
 (10, 2, '2025-03-12'),
 (11, 2, '2025-03-19'),
-(12, 2, '2025-03-26'),
-(13, 3, '2025-03-15'),
-(14, 3, '2025-03-22'),
-(15, 4, '2025-03-11'),
-(16, 4, '2025-03-18');
+(12, 2, '2025-03-26');
 
 -- --------------------------------------------------------
 
@@ -160,6 +158,20 @@ INSERT INTO `materias` (`id`, `nombre`, `anio`) VALUES
 (20, 'Matemática Discreta', 1),
 (21, 'Inglés Técnico', 1);
 
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `usuarios`
+--
+
+CREATE TABLE `usuarios` (
+  `id` int(11) NOT NULL,
+  `nombre` varchar(100) NOT NULL,
+  `email` varchar(100) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `tipo` enum('alumno','profesor') NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 --
 -- Índices para tablas volcadas
 --
@@ -198,6 +210,13 @@ ALTER TABLE `materias`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indices de la tabla `usuarios`
+--
+ALTER TABLE `usuarios`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `email` (`email`);
+
+--
 -- AUTO_INCREMENT de las tablas volcadas
 --
 
@@ -211,7 +230,7 @@ ALTER TABLE `alumnos`
 -- AUTO_INCREMENT de la tabla `asistencias`
 --
 ALTER TABLE `asistencias`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT de la tabla `clases`
@@ -230,6 +249,12 @@ ALTER TABLE `docentes`
 --
 ALTER TABLE `materias`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
+
+--
+-- AUTO_INCREMENT de la tabla `usuarios`
+--
+ALTER TABLE `usuarios`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- Restricciones para tablas volcadas
