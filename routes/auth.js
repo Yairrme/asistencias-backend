@@ -1,92 +1,87 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
-const db = require("../db");
-require("dotenv").config();
-
-/**
- * LOGIN DE USUARIO (ALUMNO / PROFESOR)
- */
-router.post("/login", (req, res) => {
-  const { email, password } = req.body;
-
-  if (!email || !password)
-    return res.status(400).json({ success: false, message: "Faltan campos" });
-
-  const sql = "SELECT * FROM usuarios WHERE email = ?";
-  db.query(sql, [email], async (err, results) => {
-    if (err) return res.status(500).json({ success: false, message: "Error en el servidor" });
-    if (results.length === 0)
-      return res.status(404).json({ success: false, message: "Usuario no encontrado" });
-
-    const user = results[0];
-    const match = await bcrypt.compare(password, user.password);
-
-    if (!match)
-      return res.status(401).json({ success: false, message: "Contraseña incorrecta" });
-
-    // Generar token JWT
-    const token = jwt.sign(
-      { id: user.id, tipo: user.tipo, nombre: user.nombre },
-      process.env.JWT_SECRET,
-      { expiresIn: "2h" }
-    );
-
-    res.json({
-      success: true,
-      message: "Login exitoso",
-      token,
-      tipo: user.tipo
-    });
-  });
-});
+const db = require('../db');
 
 /**
  * REGISTRO DE NUEVO USUARIO
+ * (Sin tokens, con apellido y vinculación a 'alumnos'/'profesores')
  */
-router.post("/register", async (req, res) => {
-  const { nombre, email, password, tipo } = req.body;
+router.post('/register', (req, res) => {
+    // 1. Obtenemos todos los campos, incluido el apellido
+    const { nombre, apellido, email, password, tipo } = req.body;
 
-  if (!nombre || !email || !password || !tipo)
-    return res.status(400).json({ success: false, message: "Faltan campos" });
-
-  const hashed = await bcrypt.hash(password, 10);
-  const sql = "INSERT INTO usuarios (nombre, email, password, tipo) VALUES (?, ?, ?, ?)";
-
-  db.query(sql, [nombre, email, hashed, tipo], (err) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ success: false, message: "Error al registrar usuario" });
+    if (!nombre || !apellido || !email || !password || !tipo) {
+        return res.status(400).json({ error: 'Todos los campos son obligatorios' });
     }
 
-    const nuevoUsuarioId = result.insertId;
+    // 2. Insertamos el nuevo usuario en la tabla `usuarios`
+    const sqlInsertUsuario = 'INSERT INTO usuarios (nombre, apellido, email, password, tipo) VALUES (?, ?, ?, ?, ?)';
+    
+    db.query(sqlInsertUsuario, [nombre, apellido, email, password, tipo], (err, result) => {
+        if (err) {
+            if (err.code === 'ER_DUP_ENTRY') {
+                return res.status(409).json({ error: 'El email ya está registrado' });
+            }
+            console.error('Error al registrar en usuarios:', err);
+            return res.status(500).json({ error: 'Error interno al registrar el usuario.' });
+        }
 
-    // Vincular el usuario automáticamente según su tipo
-    if (tipo === "alumno") {
-      db.query("INSERT INTO alumnos (nombre, usuario_id) VALUES (?, ?)", [nombre, nuevoUsuarioId]);
-    } else if (tipo === "profesor") {
-      db.query("INSERT INTO docentes (nombre, usuario_id) VALUES (?, ?)", [nombre, nuevoUsuarioId]);
-    }
+        // 3. Obtenemos el ID del usuario recién creado
+        const nuevoUsuarioId = result.insertId;
 
-
-    res.json({ success: true, message: "Usuario registrado correctamente y vinculado correctamente" });
-  });
+        // 4. Insertamos en 'alumnos' o 'profesores' para vincularlos
+        let sqlInsertRol;
+        if (tipo === 'alumno') {
+            sqlInsertRol = 'INSERT INTO alumnos (nombre, apellido, usuario_id) VALUES (?, ?, ?)';
+        } else if (tipo === 'profesor') {
+            sqlInsertRol = 'INSERT INTO profesores (nombre, apellido, usuario_id) VALUES (?, ?, ?)';
+        } else {
+            return res.status(201).json({ 
+                mensaje: 'Usuario registrado con éxito (sin rol específico)', 
+                id: nuevoUsuarioId 
+            });
+        }
+        
+        db.query(sqlInsertRol, [nombre, apellido, nuevoUsuarioId], (errRol, resultRol) => {
+            if (errRol) {
+                console.error(`Error al registrar en ${tipo}:`, errRol);
+                return res.status(500).json({ error: `Error interno al vincular el rol de ${tipo}.` });
+            }
+            
+            res.status(201).json({ 
+                mensaje: `Usuario registrado y vinculado como ${tipo} con éxito`, 
+                id: nuevoUsuarioId 
+            });
+        });
+    });
 });
 
+
 /**
- * Middleware de verificación de token
+ * LOGIN DE USUARIO (SIN TOKENS)
  */
-function verificarToken(req, res, next) {
-  const header = req.headers["authorization"];
-  if (!header) return res.status(403).json({ message: "Token requerido" });
+router.post('/login', (req, res) => {
+    const { email, password } = req.body;
+    const sql = 'SELECT * FROM usuarios WHERE email = ?';
 
-  const token = header.split(" ")[1];
-  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-    if (err) return res.status(401).json({ message: "Token inválido" });
-    req.user = decoded;
-    next();
-  });
-}
-
-module.exports = { router, verificarToken };
+    db.query(sql, [email], (err, results) => {
+        if (err) {
+            return res.status(500).json({ error: 'Error del servidor' });
+        }
+        if (results.length === 0) {
+            return res.status(401).json({ error: 'Email o contraseña incorrectos' });
+        }
+        const usuario = results[0];
+        if (password !== usuario.password) {
+            return res.status(401).json({ error: 'Email o contraseña incorrectos' });
+        }
+        // Devolvemos los datos del usuario directamente
+        res.json({
+            id: usuario.id,
+            nombre: usuario.nombre,
+            apellido: usuario.apellido,
+            email: usuario.email,
+            tipo: usuario.tipo
+        });
+    });
+});

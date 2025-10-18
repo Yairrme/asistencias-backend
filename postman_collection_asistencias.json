@@ -1,0 +1,169 @@
+{
+  "info": {
+    "_postman_id": "asistencias-backend-collection",
+    "name": "Asistencias Backend - Colección",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth - Register",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Juan\",\n  \"apellido\": \"Perez\",\n  \"email\": \"juan.perez@example.com\",\n  \"password\": \"secret\",\n  \"tipo\": \"alumno\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/auth/register",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "auth",
+            "register"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Auth - Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"juan.perez@example.com\",\n  \"password\": \"secret\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/auth/login",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "auth",
+            "login"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Asistencias - Obtener todas",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/asistencias/",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "asistencias",
+            ""
+          ]
+        }
+      }
+    },
+    {
+      "name": "Asistencias - Por alumno",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/asistencias/por-alumno/1",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "asistencias",
+            "por-alumno",
+            "1"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Asistencias - Crear",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fecha\": \"2025-10-18\",\n  \"estado\": \"Presente\",\n  \"alumno_id\": 1,\n  \"clase_id\": 1\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/asistencias",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "asistencias"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Alumnos - Obtener todos",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/alumnos/",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "alumnos",
+            ""
+          ]
+        }
+      }
+    },
+    {
+      "name": "Clases - Obtener todas",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/clases/",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "clases",
+            ""
+          ]
+        }
+      }
+    }
+  ]
+}

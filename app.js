@@ -11,21 +11,22 @@ app.use(express.json()); // para leer JSON
 // Servir archivos estáticos desde la carpeta "public"
 app.use(express.static(path.join(__dirname, "public")));
 
-// Importar rutas
+// --- CAMBIOS AQUÍ ---
+
+// 1. Importar rutas (ya no se importa verificarToken)
 const alumnosRoutes = require("./routes/alumnos");
-const asistenciasRoutes = require("./routes/asistencias");
+const asistenciasRoutes = require("./routes/Asistencias");
 const clasesRoutes = require("./routes/clases");
-const { router: authRoutes, verificarToken } = require("./routes/auth");
+// Se importa solo el router desde auth.js
+const authRoutes = require("./routes/auth"); 
 
-// Rutas públicas
+// 2. Usar las rutas (ahora todas son públicas)
 app.use("/auth", authRoutes);
+app.use("/alumnos", alumnosRoutes);
+app.use("/asistencias", asistenciasRoutes);
+app.use("/clases", clasesRoutes);
 
-
-// Rutas protegidas
-app.use("/alumnos", verificarToken, alumnosRoutes);
-app.use("/asistencias", verificarToken, asistenciasRoutes);
-app.use("/clases", verificarToken, clasesRoutes);
-
+// --- FIN DE LOS CAMBIOS ---
 
 // Ruta raíz — muestra login.html
 app.get("/", (req, res) => {
