@@ -6,11 +6,16 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <h1>Bienvenido, Alumno 👨‍🎓</h1>
+  <h1 id="welcome-title">Bienvenido, Alumno 👨‍🎓</h1>
   <button id="logout">Cerrar sesión</button>
 
   <h2>Mis Asistencias</h2>
-  <button onclick="cargarMisAsistencias()">🔄 Actualizar</button>
+  <p>Si encuentras un error en tus asistencias, por favor, contacta a tu profesor.</p>
+  <button onclick="cargarMisAsistencias()">🔄 Actualizar Mis Asistencias</button>
+  <a href="mailto:profesor@example.com?subject=Consulta sobre mis asistencias" style="text-decoration: none;">
+      <button>❓ Consultar al Profesor</button>
+  </a>
+
 
   <table id="tabla-asistencias">
     <thead>
@@ -27,14 +32,18 @@
     const API_URL = "http://localhost:3000/asistencias";
     const token = sessionStorage.getItem("token");
     const tipo = sessionStorage.getItem("tipo");
+    const nombreUsuario = sessionStorage.getItem("nombre");
+
 
     // 🔒 Verificación de sesión y tipo de usuario
-    if (!token) {
-      alert("Debes iniciar sesión primero.");
+    if (!token || tipo !== "alumno") {
+      alert("Acceso denegado. Debes iniciar sesión como alumno.");
       window.location.href = "login.html";
-    } else if (tipo !== "alumno") {
-      alert("Acceso denegado. Solo los alumnos pueden ver esta página.");
-      window.location.href = "index.html";
+    }
+
+    // Personalizar bienvenida
+    if (nombreUsuario) {
+      document.getElementById("welcome-title").textContent = `Bienvenido, ${nombreUsuario} 👨‍🎓`;
     }
 
     // 🔘 Cerrar sesión
@@ -51,10 +60,7 @@
         });
 
         if (res.status === 401) {
-          alert("Sesión expirada. Iniciá sesión nuevamente.");
-          sessionStorage.clear();
-          window.location.href = "login.html";
-          return;
+          throw new Error("Sesión expirada");
         }
 
         const data = await res.json();
@@ -62,7 +68,7 @@
         tbody.innerHTML = "";
 
         if (!data || data.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="3">No hay asistencias registradas.</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="3">No tienes asistencias registradas.</td></tr>`;
           return;
         }
 
@@ -78,7 +84,9 @@
         });
       } catch (err) {
         console.error("Error cargando asistencias:", err);
-        alert("Error al cargar tus asistencias.");
+        alert("Error al cargar tus asistencias. Tu sesión puede haber expirado.");
+        sessionStorage.clear();
+        window.location.href = "login.html";
       }
     }
 

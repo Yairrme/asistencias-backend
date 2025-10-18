@@ -1,39 +1,38 @@
-const express = require("express");
-const cors = require("cors");
-const path = require("path");
+import express from "express";
+import cors from "cors";
+import mysql from "mysql2";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+import authRoutes from "./routes/authRoutes.js";
+import alumnosRoutes from "./routes/alumnosRoutes.js";
+import clasesRoutes from "./routes/clasesRoutes.js";
+import asistenciasRoutes from "./routes/asistenciasRoutes.js";
+
 const app = express();
-require("dotenv").config();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
-app.use(cors()); // permite llamadas desde tu frontend
-app.use(express.json()); // para leer JSON
+app.use(cors());
+app.use(express.json());
 
-// Servir archivos estáticos desde la carpeta "public"
-app.use(express.static(path.join(__dirname, "public")));
-
-// --- CAMBIOS AQUÍ ---
-
-// 1. Importar rutas (ya no se importa verificarToken)
-const alumnosRoutes = require("./routes/alumnos");
-const asistenciasRoutes = require("./routes/Asistencias");
-const clasesRoutes = require("./routes/clases");
-// Se importa solo el router desde auth.js
-const authRoutes = require("./routes/auth"); 
-
-// 2. Usar las rutas (ahora todas son públicas)
+// Rutas principales
 app.use("/auth", authRoutes);
 app.use("/alumnos", alumnosRoutes);
-app.use("/asistencias", asistenciasRoutes);
 app.use("/clases", clasesRoutes);
+app.use("/asistencias", asistenciasRoutes);
 
-// --- FIN DE LOS CAMBIOS ---
-
-// Ruta raíz — muestra login.html
+// Ruta base
 app.get("/", (req, res) => {
-  res.redirect("/login.html");
+  res.json({ message: "Asistencias Backend funcionando correctamente ✅" });
 });
 
-// Iniciar servidor
+// Middleware para manejar errores
+app.use((err, req, res, next) => {
+  console.error("Error:", err);
+  res.status(500).json({ error: "Error interno del servidor", details: err.message });
+});
+
 app.listen(PORT, () => {
-  console.log(`✅ Servidor corriendo en http://localhost:${PORT}`);
+  console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
 });
