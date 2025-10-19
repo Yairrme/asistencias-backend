@@ -30,12 +30,31 @@
     .ausente { background-color: #f44336; color: white; }
     .justificado { background-color: #ff9800; color: white; }
     .tarde { background-color: #2196f3; color: white; }
+    select {
+      padding: 8px;
+      margin-top: 10px;
+    }
+    .cerrar-sesion {
+      background-color: #555;
+      color: white;
+      padding: 8px 12px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 20px;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>Panel del Profesor</h1>
     <p id="info"></p>
+
+    <!-- 🔹 Selector de materia -->
+    <label for="materiaSelect">Seleccione la materia:</label>
+    <select id="materiaSelect">
+      <option value="">-- Seleccionar --</option>
+    </select>
 
     <table id="tablaAlumnos">
       <thead>
@@ -50,6 +69,8 @@
     </table>
 
     <p id="mensaje" class="mensaje"></p>
+
+    <button class="cerrar-sesion" id="logoutBtn">Cerrar sesión</button>
   </div>
 
   <script>
@@ -57,16 +78,64 @@
     const info = document.getElementById("info");
     const tabla = document.querySelector("#tablaAlumnos tbody");
     const mensaje = document.getElementById("mensaje");
+    const materiaSelect = document.getElementById("materiaSelect");
 
+    // 🧍‍♂️ Verificar acceso
     if (!usuario || usuario.tipo !== "profesor") {
       alert("Acceso no autorizado. Inicia sesión como profesor.");
       window.location.href = "login.html";
     } else {
       info.textContent = `👨‍🏫 Bienvenido, Prof. ${usuario.nombre} ${usuario.apellido}`;
-      cargarAlumnos();
+      cargarMateriasProfesor(usuario.id);
     }
 
-    async function cargarAlumnos() {
+    // 🔹 Cargar solo las materias del profesor logueado
+    async function cargarMateriasProfesor(profesorId) {
+      try {
+        const res = await fetch("http://localhost:3000/clases");
+        const clases = await res.json();
+
+        // Filtrar solo las materias del profesor
+        const materias = [];
+        clases.forEach(c => {
+          if (c.profesor_id === profesorId && !materias.some(m => m.id === c.materia_id)) {
+            materias.push({ id: c.materia_id, nombre: c.materia });
+          }
+        });
+
+        // Si no hay clases con profesor_id (fallback)
+        if (materias.length === 0) {
+          const materiasRes = await fetch("http://localhost:3000/materias");
+          const todas = await materiasRes.json();
+          todas.forEach(m => {
+            if (m.profesor_id === profesorId) materias.push(m);
+          });
+        }
+
+        // Cargar en el select
+        materias.forEach(m => {
+          const opt = document.createElement("option");
+          opt.value = m.id;
+          opt.textContent = m.nombre;
+          materiaSelect.appendChild(opt);
+        });
+      } catch (error) {
+        console.error("Error al cargar materias:", error);
+        mensaje.textContent = "⚠️ Error al cargar materias.";
+      }
+    }
+
+    // 🔹 Cargar alumnos al elegir una materia
+    materiaSelect.addEventListener("change", async () => {
+      const materiaId = materiaSelect.value;
+      if (materiaId) {
+        cargarAlumnos(materiaId);
+      } else {
+        tabla.innerHTML = "";
+      }
+    });
+
+    async function cargarAlumnos(materiaId) {
       try {
         const res = await fetch("http://localhost:3000/alumnos");
         const alumnos = await res.json();
@@ -79,10 +148,10 @@
             <td>${alumno.nombre}</td>
             <td>${alumno.apellido}</td>
             <td>
-              <button class="presente" onclick="registrarAsistencia(${alumno.id}, 'Presente')">Presente</button>
-              <button class="ausente" onclick="registrarAsistencia(${alumno.id}, 'Ausente')">Ausente</button>
-              <button class="justificado" onclick="registrarAsistencia(${alumno.id}, 'Justificado')">Justificado</button>
-              <button class="tarde" onclick="registrarAsistencia(${alumno.id}, 'Tarde')">Tarde</button>
+              <button class="presente" onclick="registrarAsistencia(${alumno.id}, 'Presente', ${materiaId})">Presente</button>
+              <button class="ausente" onclick="registrarAsistencia(${alumno.id}, 'Ausente', ${materiaId})">Ausente</button>
+              <button class="justificado" onclick="registrarAsistencia(${alumno.id}, 'Justificado', ${materiaId})">Justificado</button>
+              <button class="tarde" onclick="registrarAsistencia(${alumno.id}, 'Tarde', ${materiaId})">Tarde</button>
             </td>
           `;
           tabla.appendChild(fila);
@@ -93,26 +162,45 @@
       }
     }
 
-    async function registrarAsistencia(alumnoId, estado) {
+    // 🔹 Registrar asistencia
+    async function registrarAsistencia(alumnoId, estado, materiaId) {
       try {
-        const claseId = 1; // 🔹 puedes ajustar o elegir según la clase actual
+        const clasesRes = await fetch("http://localhost:3000/clases");
+        const clases = await clasesRes.json();
+        const clase = clases.find(c => c.materia_id == materiaId);
+
+        if (!clase) {
+          mensaje.textContent = "⚠️ No se encontró clase para esa materia.";
+          return;
+        }
+
         const res = await fetch("http://localhost:3000/asistencias", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ alumno_id: alumnoId, clase_id: claseId, estado }),
+          body: JSON.stringify({
+            alumno_id: alumnoId,
+            clase_id: clase.id,
+            estado,
+          }),
         });
 
         const data = await res.json();
         if (res.ok) {
-          mensaje.textContent = `✅ ${data.message || "Asistencia registrada correctamente."}`;
+          mensaje.textContent = "✅ Asistencia registrada correctamente.";
         } else {
-          mensaje.textContent = `❌ ${data.message || "Error al registrar asistencia."}`;
+          mensaje.textContent = "❌ Error al registrar asistencia.";
         }
       } catch (error) {
-        mensaje.textContent = "⚠️ Error al conectar con el servidor.";
         console.error(error);
+        mensaje.textContent = "⚠️ Error al conectar con el servidor.";
       }
     }
+
+    // 🔹 Cerrar sesión
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      localStorage.removeItem("usuario");
+      window.location.href = "login.html";
+    });
   </script>
 </body>
 </html>

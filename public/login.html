@@ -21,47 +21,46 @@
 
     <p id="mensaje" class="mensaje"></p>
   </div>
-<script>
-  const form = document.getElementById("loginForm");
-  const mensaje = document.getElementById("mensaje");
 
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
+  <script>
+    const form = document.getElementById("loginForm");
+    const mensaje = document.getElementById("mensaje");
 
-    const email = document.getElementById("email").value;
-    const password = document.getElementById("password").value;
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
 
-    try {
-      const res = await fetch("http://localhost:3000/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
 
-      const data = await res.json();
+      try {
+        const res = await fetch("http://localhost:3000/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
 
-      if (res.ok) {
-        mensaje.textContent = "✅ Inicio de sesión exitoso";
+        const data = await res.json();
 
-        // Guardamos el usuario en localStorage
-        localStorage.setItem("usuario", JSON.stringify(data.usuario));
+        if (res.ok) {
+          mensaje.textContent = "✅ Inicio de sesión exitoso";
 
-        // Redirigimos según el tipo
-        if (data.usuario.tipo === "profesor") {
-          window.location.href = "index.html"; // vista profesor
-        } else if (data.usuario.tipo === "alumno") {
-          window.location.href = "alumno.html"; // vista alumno
+          // Guardamos el usuario en localStorage
+          localStorage.setItem("usuario", JSON.stringify(data.usuario));
+
+          // Redirigimos según el tipo
+          if (data.usuario.tipo === "profesor") {
+            window.location.href = "index.html"; // vista profesor
+          } else if (data.usuario.tipo === "alumno") {
+            window.location.href = "alumno.html"; // vista alumno
+          }
+        } else {
+          mensaje.textContent = "❌ " + (data.error || data.message || "Credenciales incorrectas");
         }
-      } else {
-        mensaje.textContent = "❌ " + (data.error || data.message || "Credenciales incorrectas");
+      } catch (error) {
+        console.error("Error al iniciar sesión:", error);
+        mensaje.textContent = "⚠️ Error al conectar con el servidor.";
       }
-    } catch (error) {
-      console.error("Error al iniciar sesión:", error);
-      mensaje.textContent = "⚠️ Error al conectar con el servidor.";
-    }
-  });
-</script>
-
- 
+    });
+  </script>
 </body>
 </html>
