@@ -1,97 +1,122 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Mis Asistencias - Alumno</title>
-  <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Panel del Alumno</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
+      text-align: center;
+    }
+    th {
+      background-color: #f3f3f3;
+    }
+    .error-btn {
+      background-color: #ff9800;
+      color: white;
+      border: none;
+      padding: 5px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .error-btn:hover {
+      background-color: #e68900;
+    }
+  </style>
 </head>
 <body>
-  <h1 id="welcome-title">Bienvenido, Alumno 👨‍🎓</h1>
-  <button id="logout">Cerrar sesión</button>
+  <div class="container">
+    <h1>Panel del Alumno</h1>
+    <p id="info"></p>
 
-  <h2>Mis Asistencias</h2>
-  <p>Si encuentras un error en tus asistencias, por favor, contacta a tu profesor.</p>
-  <button onclick="cargarMisAsistencias()">🔄 Actualizar Mis Asistencias</button>
-  <a href="mailto:profesor@example.com?subject=Consulta sobre mis asistencias" style="text-decoration: none;">
-      <button>❓ Consultar al Profesor</button>
-  </a>
+    <table id="tablaAsistencias">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Materia</th>
+          <th>Estado</th>
+          <th>Acción</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
 
-
-  <table id="tabla-asistencias">
-    <thead>
-      <tr>
-        <th>Materia</th>
-        <th>Fecha</th>
-        <th>Estado</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+    <p id="mensaje" class="mensaje"></p>
+  </div>
 
   <script>
-    const API_URL = "http://localhost:3000/asistencias";
-    const token = sessionStorage.getItem("token");
-    const tipo = sessionStorage.getItem("tipo");
-    const nombreUsuario = sessionStorage.getItem("nombre");
+    const usuario = JSON.parse(localStorage.getItem("usuario"));
+    const info = document.getElementById("info");
+    const tabla = document.querySelector("#tablaAsistencias tbody");
+    const mensaje = document.getElementById("mensaje");
 
-
-    // 🔒 Verificación de sesión y tipo de usuario
-    if (!token || tipo !== "alumno") {
-      alert("Acceso denegado. Debes iniciar sesión como alumno.");
+    if (!usuario || usuario.tipo !== "alumno") {
+      alert("Acceso no autorizado. Inicia sesión como alumno.");
       window.location.href = "login.html";
+    } else {
+      info.textContent = `👨‍🎓 Bienvenido, ${usuario.nombre} ${usuario.apellido}`;
+      cargarAsistencias();
     }
 
-    // Personalizar bienvenida
-    if (nombreUsuario) {
-      document.getElementById("welcome-title").textContent = `Bienvenido, ${nombreUsuario} 👨‍🎓`;
-    }
-
-    // 🔘 Cerrar sesión
-    document.getElementById("logout").addEventListener("click", () => {
-      sessionStorage.clear();
-      window.location.href = "login.html";
-    });
-
-    // 📋 Cargar asistencias del alumno logueado
-    async function cargarMisAsistencias() {
+    async function cargarAsistencias() {
       try {
-        const res = await fetch(`${API_URL}/mias`, {
-          headers: { "Authorization": `Bearer ${token}` }
-        });
+        const res = await fetch(`http://localhost:3000/asistencias/por-alumno/${usuario.id}`);
+        const asistencias = await res.json();
+        tabla.innerHTML = "";
 
-        if (res.status === 401) {
-          throw new Error("Sesión expirada");
-        }
-
-        const data = await res.json();
-        const tbody = document.querySelector("#tabla-asistencias tbody");
-        tbody.innerHTML = "";
-
-        if (!data || data.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="3">No tienes asistencias registradas.</td></tr>`;
+        if (asistencias.length === 0) {
+          tabla.innerHTML = `<tr><td colspan="4">No hay asistencias registradas aún.</td></tr>`;
           return;
         }
 
-        data.forEach(a => {
-          const row = `
-            <tr>
-              <td>${a.materia || "Sin materia"}</td>
-              <td>${new Date(a.fecha).toLocaleDateString()}</td>
-              <td>${a.estado}</td>
-            </tr>
+        asistencias.forEach(asistencia => {
+          const fila = document.createElement("tr");
+          fila.innerHTML = `
+            <td>${asistencia.fecha || "Sin fecha"}</td>
+            <td>${asistencia.materia || "Desconocida"}</td>
+            <td>${asistencia.estado}</td>
+            <td><button class="error-btn" onclick="marcarError(${asistencia.id})">Reportar error</button></td>
           `;
-          tbody.innerHTML += row;
+          tabla.appendChild(fila);
         });
-      } catch (err) {
-        console.error("Error cargando asistencias:", err);
-        alert("Error al cargar tus asistencias. Tu sesión puede haber expirado.");
-        sessionStorage.clear();
-        window.location.href = "login.html";
+      } catch (error) {
+        console.error("Error al cargar asistencias:", error);
+        mensaje.textContent = "⚠️ Error al obtener tus asistencias.";
       }
     }
 
-    // 🚀 Cargar al entrar
-    window.onload = cargarMisAsistencias;
+    async function marcarError(id) {
+      try {
+        const confirmacion = confirm("¿Deseas reportar un error en esta asistencia?");
+        if (!confirmacion) return;
+
+        const res = await fetch(`http://localhost:3000/asistencias/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ estado: "Justificado" }) // ejemplo de corrección
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          mensaje.textContent = "✅ Asistencia marcada como justificada (pendiente de revisión).";
+          cargarAsistencias();
+        } else {
+          mensaje.textContent = "❌ No se pudo actualizar la asistencia.";
+        }
+      } catch (error) {
+        console.error(error);
+        mensaje.textContent = "⚠️ Error al conectar con el servidor.";
+      }
+    }
   </script>
 </body>
 </html>

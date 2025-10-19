@@ -1,162 +1,118 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Panel de Profesor - Sistema de Asistencias</title>
-  <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Panel del Profesor</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
+      text-align: center;
+    }
+    th {
+      background-color: #f3f3f3;
+    }
+    button {
+      padding: 6px 10px;
+      margin: 2px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .presente { background-color: #4caf50; color: white; }
+    .ausente { background-color: #f44336; color: white; }
+    .justificado { background-color: #ff9800; color: white; }
+    .tarde { background-color: #2196f3; color: white; }
+  </style>
 </head>
 <body>
-  <h1 id="welcome-title">Bienvenido, Profesor 👨‍🏫</h1>
-  <button id="logout">Cerrar sesión</button>
+  <div class="container">
+    <h1>Panel del Profesor</h1>
+    <p id="info"></p>
 
-  <h2>Listado General de Asistencias</h2>
-  <button onclick="cargarAsistencias()">🔄 Actualizar</button>
-  <table id="tabla-asistencias">
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>Alumno</th>
-        <th>Materia</th>
-        <th>Fecha</th>
-        <th>Estado</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+    <table id="tablaAlumnos">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nombre</th>
+          <th>Apellido</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
 
-  <h2>Registrar Nueva Asistencia</h2>
-  <form id="form-asistencia">
-    <label>Materia y Fecha:
-      <select id="clase_id" required></select>
-    </label>
-    <label>Alumno:
-      <select id="alumno_id" required></select>
-    </label>
-    <label>Estado:
-      <select id="estado">
-        <option value="Presente">Presente</option>
-        <option value="Ausente">Ausente</option>
-        <option value="Tarde">Tarde</option>
-        <option value="Justificado">Justificado</option> </select>
-    </label>
-    <button type="submit">Registrar Asistencia</button>
-  </form>
+    <p id="mensaje" class="mensaje"></p>
+  </div>
 
   <script>
-    const API_URL = "http://localhost:3000";
-    const token = sessionStorage.getItem("token");
-    const tipoUsuario = sessionStorage.getItem("tipo");
-    const nombreUsuario = sessionStorage.getItem("nombre");
+    const usuario = JSON.parse(localStorage.getItem("usuario"));
+    const info = document.getElementById("info");
+    const tabla = document.querySelector("#tablaAlumnos tbody");
+    const mensaje = document.getElementById("mensaje");
 
-    // 🔒 Verificación de seguridad
-    if (!token || tipoUsuario !== 'profesor') {
-      alert("Acceso denegado. Debes iniciar sesión como profesor.");
+    if (!usuario || usuario.tipo !== "profesor") {
+      alert("Acceso no autorizado. Inicia sesión como profesor.");
       window.location.href = "login.html";
+    } else {
+      info.textContent = `👨‍🏫 Bienvenido, Prof. ${usuario.nombre} ${usuario.apellido}`;
+      cargarAlumnos();
     }
 
-    // Personalizar bienvenida
-    if (nombreUsuario) {
-      document.getElementById("welcome-title").textContent = `Bienvenido, Profesor ${nombreUsuario} 👨‍🏫`;
-    }
-
-    // Cargar todas las asistencias (vista de profesor)
-    async function cargarAsistencias() {
-      try {
-        const res = await fetch(`${API_URL}/asistencias/all`, {
-          headers: { "Authorization": `Bearer ${token}` }
-        });
-        if (res.status === 401) throw new Error("Sesión expirada");
-        
-        const data = await res.json();
-        const tbody = document.querySelector("#tabla-asistencias tbody");
-        tbody.innerHTML = "";
-        data.forEach(a => {
-          tbody.innerHTML += `
-            <tr>
-              <td>${a.id || "-"}</td>
-              <td>${a.nombre || "-"} ${a.apellido || ""}</td>
-              <td>${a.materia}</td>
-              <td>${new Date(a.fecha).toLocaleDateString()}</td>
-              <td>${a.estado}</td>
-            </tr>`;
-        });
-      } catch (err) {
-        console.error("Error cargando asistencias:", err);
-        alert("Error al cargar asistencias. Tu sesión puede haber expirado.");
-        window.location.href = "login.html";
-      }
-    }
-
-    // Cargar alumnos en el dropdown
     async function cargarAlumnos() {
       try {
-        const res = await fetch(`${API_URL}/alumnos`, {
-          headers: { "Authorization": `Bearer ${token}` }
-        });
-        const data = await res.json();
-        const select = document.querySelector("#alumno_id");
-        select.innerHTML = '<option value="">-- Seleccione un alumno --</option>';
-        data.forEach(al => {
-          select.innerHTML += `<option value="${al.id}">${al.nombre} ${al.apellido || ''}</option>`;
-        });
-      } catch (err) { console.error("Error cargando alumnos:", err); }
-    }
+        const res = await fetch("http://localhost:3000/alumnos");
+        const alumnos = await res.json();
+        tabla.innerHTML = "";
 
-    // Cargar clases en el dropdown
-    async function cargarClases() {
-      try {
-        const res = await fetch(`${API_URL}/clases`, {
-          headers: { "Authorization": `Bearer ${token}` }
+        alumnos.forEach(alumno => {
+          const fila = document.createElement("tr");
+          fila.innerHTML = `
+            <td>${alumno.id}</td>
+            <td>${alumno.nombre}</td>
+            <td>${alumno.apellido}</td>
+            <td>
+              <button class="presente" onclick="registrarAsistencia(${alumno.id}, 'Presente')">Presente</button>
+              <button class="ausente" onclick="registrarAsistencia(${alumno.id}, 'Ausente')">Ausente</button>
+              <button class="justificado" onclick="registrarAsistencia(${alumno.id}, 'Justificado')">Justificado</button>
+              <button class="tarde" onclick="registrarAsistencia(${alumno.id}, 'Tarde')">Tarde</button>
+            </td>
+          `;
+          tabla.appendChild(fila);
         });
-        const data = await res.json();
-        const select = document.querySelector("#clase_id");
-        select.innerHTML = '<option value="">-- Seleccione una materia y fecha --</option>';
-        data.forEach(cl => {
-          select.innerHTML += `<option value="${cl.id}">${cl.materia} - ${new Date(cl.fecha).toLocaleDateString()}</option>`;
-        });
-      } catch (err) { console.error("Error cargando clases:", err); }
-    }
-
-    // Event listener para registrar asistencia
-    document.querySelector("#form-asistencia").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const alumno_id = document.querySelector("#alumno_id").value;
-      const clase_id = document.querySelector("#clase_id").value;
-      const estado = document.querySelector("#estado").value;
-
-      if (!alumno_id || !clase_id) {
-        alert("Por favor, seleccione alumno y materia.");
-        return;
+      } catch (error) {
+        mensaje.textContent = "⚠️ Error al cargar alumnos.";
+        console.error(error);
       }
+    }
 
+    async function registrarAsistencia(alumnoId, estado) {
       try {
-        const res = await fetch(`${API_URL}/asistencias`, {
+        const claseId = 1; // 🔹 puedes ajustar o elegir según la clase actual
+        const res = await fetch("http://localhost:3000/asistencias", {
           method: "POST",
-          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-          body: JSON.stringify({ alumno_id, clase_id, estado })
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ alumno_id: alumnoId, clase_id: claseId, estado }),
         });
-        const result = await res.json();
-        alert(result.message || "Asistencia registrada con éxito");
-        cargarAsistencias(); // Actualizar la tabla
-        document.querySelector("#form-asistencia").reset(); // Limpiar formulario
-      } catch (err) {
-        console.error("Error registrando asistencia:", err);
-        alert("Ocurrió un error al registrar la asistencia.");
+
+        const data = await res.json();
+        if (res.ok) {
+          mensaje.textContent = `✅ ${data.message || "Asistencia registrada correctamente."}`;
+        } else {
+          mensaje.textContent = `❌ ${data.message || "Error al registrar asistencia."}`;
+        }
+      } catch (error) {
+        mensaje.textContent = "⚠️ Error al conectar con el servidor.";
+        console.error(error);
       }
-    });
-
-    // Cerrar sesión
-    document.getElementById("logout").addEventListener("click", () => {
-      sessionStorage.clear();
-      window.location.href = "login.html";
-    });
-
-    // Carga inicial
-    window.onload = () => {
-      cargarAsistencias();
-      cargarAlumnos();
-      cargarClases();
-    };
+    }
   </script>
 </body>
 </html>

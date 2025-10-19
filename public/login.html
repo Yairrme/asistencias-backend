@@ -1,61 +1,67 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Login - Sistema de Asistencias</title>
-  <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Iniciar Sesión</title>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div id="msg" style="color:red;margin-top:10px;"></div>
   <div class="container">
-    <h1>Ingreso al Sistema</h1>
-    <form id="form-login">
-      <input type="email" id="email" placeholder="Correo electrónico" required>
-      <input type="password" id="password" placeholder="Contraseña" required>
-      <button type="submit">Iniciar Sesión</button>
+    <h1>Iniciar Sesión</h1>
+    <form id="loginForm">
+      <label for="email">Correo electrónico</label>
+      <input type="email" id="email" placeholder="ejemplo@correo.com" required />
+
+      <label for="password">Contraseña</label>
+      <input type="password" id="password" placeholder="********" required />
+
+      <button type="submit">Ingresar</button>
     </form>
-    <p id="msg-error"></p>
+
+    <p id="mensaje" class="mensaje"></p>
   </div>
+<script>
+  const form = document.getElementById("loginForm");
+  const mensaje = document.getElementById("mensaje");
 
-  <script>
-    document.getElementById("form-login").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const email = document.getElementById("email").value;
-      const password = document.getElementById("password").value;
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
 
-      try {
-        const res = await fetch("http://localhost:3000/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password })
-        });
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
 
-        const data = await res.json();
-        
-        // Si el backend devuelve un token (éxito)
-        if (data.token) {
-          // Guardamos el token y el tipo de usuario
-          sessionStorage.setItem("token", data.token);
-          sessionStorage.setItem("tipo", data.tipo);
-          sessionStorage.setItem("nombre", data.nombre); // Guardamos el nombre para personalizar la bienvenida
+    try {
+      const res = await fetch("http://localhost:3000/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
 
-          // Verificamos el tipo de usuario y redirigimos
-          if (data.tipo === 'profesor') {
-            window.location.href = "Index.html"; // Redirigir a la vista del profesor
-          } else if (data.tipo === 'alumno') {
-            window.location.href = "alumno.html"; // Redirigir a la vista del alumno
-          } else {
-            document.getElementById("msg-error").textContent = "Tipo de usuario no reconocido.";
-          }
-        } else {
-          // Si hay un error, lo mostramos
-          document.getElementById("msg-error").textContent = data.message || 'Error en el inicio de sesión.';
+      const data = await res.json();
+
+      if (res.ok) {
+        mensaje.textContent = "✅ Inicio de sesión exitoso";
+
+        // Guardamos el usuario en localStorage
+        localStorage.setItem("usuario", JSON.stringify(data.usuario));
+
+        // Redirigimos según el tipo
+        if (data.usuario.tipo === "profesor") {
+          window.location.href = "index.html"; // vista profesor
+        } else if (data.usuario.tipo === "alumno") {
+          window.location.href = "alumno.html"; // vista alumno
         }
-      } catch (err) {
-        console.error("Error en el fetch:", err);
-        document.getElementById("msg-error").textContent = "No se pudo conectar con el servidor.";
+      } else {
+        mensaje.textContent = "❌ " + (data.error || data.message || "Credenciales incorrectas");
       }
-    });
-  </script>
+    } catch (error) {
+      console.error("Error al iniciar sesión:", error);
+      mensaje.textContent = "⚠️ Error al conectar con el servidor.";
+    }
+  });
+</script>
+
+ 
 </body>
 </html>

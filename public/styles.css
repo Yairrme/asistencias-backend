@@ -1,79 +1,61 @@
-/* ==================================== */
-/* ESTILOS GLOBALES            */
-/* ==================================== */
-
-/* Estilos aplicados al cuerpo de la página (fondo, tipografía, márgenes) */
-body { 
-    font-family: Arial, sans-serif; /* Fuente base */
-    margin: 20px; /* Margen alrededor del contenido */
-    background: #f7f7f7; /* Color de fondo gris claro para la página */
+body {
+  font-family: 'Segoe UI', sans-serif;
+  background: #f7f9fc;
+  margin: 0;
+  padding: 0;
+  color: #333;
 }
 
-/* Estilo para los títulos principales (H1) */
-h1 { 
-    color: #333; /* Color de texto gris oscuro */
+h1 {
+  text-align: center;
+  color: #2c3e50;
+  margin-top: 20px;
 }
 
-/* ==================================== */
-/* ESTILOS DE TABLA          */
-/* ==================================== */
-
-/* Estilos para el contenedor de la tabla */
-table { 
-    border-collapse: collapse; /* Unir bordes de celdas */
-    width: 100%; /* Ocupar todo el ancho disponible */
-    margin-top: 20px; /* Separación superior */
-    background: white; /* Fondo blanco para la tabla */
+.login-container {
+  max-width: 350px;
+  margin: 100px auto;
+  padding: 25px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
 
-/* Estilos para celdas de encabezado (th) y celdas de datos (td) */
-th, td { 
-    border: 1px solid #ccc; /* Borde gris claro */
-    padding: 8px; /* Espaciado interno */
-    text-align: left; /* Alinear texto a la izquierda */
+input, select, button {
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
 }
 
-/* Estilo específico para los encabezados de columna (th) */
-th { 
-    background: #eee; /* Color de fondo gris muy claro para diferenciar */
+button {
+  background-color: #3498db;
+  color: white;
+  border: none;
+  cursor: pointer;
 }
 
-/* ==================================== */
-/* ESTILOS DE FORMULARIO       */
-/* ==================================== */
-
-/* Estilo para el contenedor del formulario */
-form { 
-    margin-top: 20px; /* Separación superior */
-    background: #fff; /* Fondo blanco */
-    padding: 15px; /* Espaciado interno */
-    border: 1px solid #ccc; /* Borde simple gris claro */
+button:hover {
+  background-color: #2980b9;
 }
 
-/* Estilo para las etiquetas (Label) de los campos */
-label { 
-    display: block; /* Ocupar todo el ancho y forzar salto de línea */
-    margin-top: 10px; /* Espacio entre campos */
+table {
+  width: 90%;
+  margin: 20px auto;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
 }
 
-/* Estilo para campos de selección (select), entrada (input) y botones */
-select, input, button { 
-    padding: 6px; /* Espaciado interno */
-    margin-top: 5px; /* Separación de la etiqueta */
-    width: 100%; /* Ocupar todo el ancho del contenedor */
-    /* Nota: el estilo del botón se sobrescribe a continuación para darle color */
+th, td {
+  padding: 10px;
+  text-align: center;
+  border-bottom: 1px solid #eee;
 }
 
-/* Estilo específico para el botón de envío */
-button { 
-    margin-top: 15px; /* Más separación superior */
-    background: #007bff; /* Color de fondo azul (típico de un botón principal) */
-    color: white; /* Texto blanco */
-    border: none; /* Sin borde */
-    cursor: pointer; /* Cambiar el cursor a una mano */
-}
-
-/* Estilo para el botón cuando el usuario pasa el ratón por encima (hover) */
-button:hover { 
-    background: #0056b3; /* Un tono de azul más oscuro para el efecto visual */
+select {
+  border-radius: 6px;
+  padding: 6px;
 }
