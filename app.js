@@ -25,12 +25,14 @@ import authRoutes from "./routes/authRoutes.js";
 import alumnosRoutes from "./routes/alumnosRoutes.js";
 import clasesRoutes from "./routes/clasesRoutes.js";
 import asistenciasRoutes from "./routes/asistenciasRoutes.js";
+import materiasRoutes from "./routes/materiasRoutes.js"; // ✅ agregado
 
 // Usar rutas principales
 app.use("/auth", authRoutes);
 app.use("/alumnos", alumnosRoutes);
 app.use("/clases", clasesRoutes);
 app.use("/asistencias", asistenciasRoutes);
+app.use("/materias", materiasRoutes); // ✅ nuevo endpoint
 
 // ✅ Ruta principal → muestra el index.html
 app.get("/", (req, res) => {
@@ -40,7 +42,9 @@ app.get("/", (req, res) => {
 // Middleware para manejar errores
 app.use((err, req, res, next) => {
   console.error("Error:", err);
-  res.status(500).json({ error: "Error interno del servidor", details: err.message });
+  res
+    .status(500)
+    .json({ error: "Error interno del servidor", details: err.message });
 });
 
 // Iniciar servidor
