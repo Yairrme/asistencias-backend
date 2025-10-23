@@ -17,18 +17,18 @@ router.get("/por-alumno/:alumnoId", getAsistenciasByAlumno);
 // Registrar una nueva asistencia
 router.post("/", createAsistencia);
 
-// Actualizar asistencia (marcar error o cambiar estado)
+// Actualizar asistencia (estado o comentario opcional)
 router.patch("/:id", async (req, res) => {
   const { id } = req.params;
-  const { estado, observacion } = req.body;
+  const { presente, observacion } = req.body;
 
   try {
     const query = `
       UPDATE asistencias 
-      SET estado = ?, observacion = ?
-      WHERE id = ?;
+      SET presente = ?, observacion = ?
+      WHERE id_asistencia = ?;
     `;
-    await db.query(query, [estado, observacion || null, id]);
+    await db.query(query, [presente, observacion || null, id]);
     res.json({ message: "Asistencia actualizada correctamente ✅" });
   } catch (error) {
     console.error("Error al actualizar asistencia:", error);

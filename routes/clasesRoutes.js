@@ -1,12 +1,18 @@
 import express from "express";
-import { getAllClases, getMateriasPorProfesor } from "../controllers/clasesController.js";
+import {
+  getAllClases,
+  getMateriasPorProfesor,
+  createClase,
+  asignarMateriaAClase
+} from "../controllers/clasesController.js";
 
 const router = express.Router();
 
-// Obtener todas las clases
 router.get("/", getAllClases);
+router.post("/", createClase);
+router.get("/por-profesor/:profesorId", getMateriasPorProfesor); // Obtener materias de un profesor específico
 
-// Obtener materias de un profesor específico
-router.get("/por-profesor/:profesorId", getMateriasPorProfesor);
+//Esto sirve relacionar clases con materias
+router.post("/materia", asignarMateriaAClase);
 
 export default router;

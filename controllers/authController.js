@@ -1,63 +1,123 @@
-import pool from '../config/db.js';
-import bcrypt from 'bcryptjs';
+import pool from "../config/db.js";
+import bcrypt from "bcryptjs";
 
+/**
+ * ✅ Registrar nuevo usuario (alumno o profesor)
+ */
 export async function register(req, res, next) {
   try {
-    const { nombre, apellido, email, password, tipo } = req.body;
-    if (!nombre || !apellido || !email || !password || !tipo) {
-      return res.status(400).json({ error: 'Faltan datos obligatorios' });
+    const { username, password, rol, nombre, apellido, email } = req.body;
+
+    if (!username || !password || !rol) {
+      return res.status(400).json({ error: "Faltan datos obligatorios" });
     }
 
-    // verificar si email ya existe
-    const [rows] = await pool.query('SELECT id FROM usuarios WHERE email = ?', [email]);
-    if (rows.length > 0) {
-      return res.status(409).json({ error: 'El email ya está en uso' });
+    // Verificar si ya existe el username
+    const [exists] = await pool.query(
+      "SELECT id_usuario FROM usuarios WHERE username = ?",
+      [username]
+    );
+    if (exists.length > 0) {
+      return res.status(409).json({ error: "El usuario ya existe" });
     }
 
+    // Encriptar contraseña
     const salt = await bcrypt.genSalt(10);
     const hashed = await bcrypt.hash(password, salt);
 
+    // Crear registro base en usuarios
     const [result] = await pool.query(
-      'INSERT INTO usuarios (nombre, apellido, email, password, tipo) VALUES (?, ?, ?, ?, ?)',
-      [nombre, apellido, email, hashed, tipo]
+      "INSERT INTO usuarios (username, password, rol) VALUES (?, ?, ?)",
+      [username, hashed, rol]
     );
 
     const usuarioId = result.insertId;
 
-    // opcional: crear registro en tabla alumnos si tipo = 'alumno'
-    if (tipo === 'alumno') {
-      await pool.query('INSERT INTO alumnos (nombre, apellido, usuario_id) VALUES (?, ?, ?)', [nombre, apellido, usuarioId]);
+    // Si el rol es profesor o alumno, crear registro correspondiente
+    if (rol === "alumno") {
+      const [alumnoResult] = await pool.query(
+        "INSERT INTO alumnos (nombre, apellido, email) VALUES (?, ?, ?)",
+        [nombre || username, apellido || "", email || null]
+      );
+
+      const alumnoId = alumnoResult.insertId;
+      await pool.query(
+        "UPDATE usuarios SET id_alumno = ? WHERE id_usuario = ?",
+        [alumnoId, usuarioId]
+      );
+    } else if (rol === "profesor") {
+      const [profResult] = await pool.query(
+        "INSERT INTO profesores (nombre, apellido, email) VALUES (?, ?, ?)",
+        [nombre || username, apellido || "", email || null]
+      );
+
+      const profId = profResult.insertId;
+      await pool.query(
+        "UPDATE usuarios SET id_profesor = ? WHERE id_usuario = ?",
+        [profId, usuarioId]
+      );
     }
 
-    res.status(201).json({ message: 'Usuario registrado', usuarioId });
+    res.status(201).json({
+      message: "Usuario registrado correctamente",
+      usuarioId,
+    });
   } catch (err) {
+    console.error("Error en register:", err);
     next(err);
   }
 }
 
+/**
+ * ✅ Iniciar sesión
+ */
 export async function login(req, res, next) {
   try {
-    const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ error: 'Faltan email o password' });
+    const { username, password } = req.body;
 
-    const [rows] = await pool.query('SELECT id, nombre, apellido, password, tipo FROM usuarios WHERE email = ?', [email]);
-    if (rows.length === 0) return res.status(401).json({ error: 'Credenciales inválidas' });
+    if (!username || !password) {
+      return res.status(400).json({ error: "Faltan username o password" });
+    }
+
+    const [rows] = await pool.query(
+      "SELECT id_usuario, username, password, rol, id_alumno, id_profesor FROM usuarios WHERE username = ?",
+      [username]
+    );
+
+    if (rows.length === 0)
+      return res.status(401).json({ error: "Credenciales inválidas" });
 
     const user = rows[0];
     const valid = await bcrypt.compare(password, user.password);
-    if (!valid) return res.status(401).json({ error: 'Credenciales inválidas' });
+    if (!valid) return res.status(401).json({ error: "Credenciales inválidas" });
 
-    // No usamos JWT: devolvemos info básica (sin password)
+    // Recuperar datos adicionales si es alumno o profesor
+    let extraData = {};
+    if (user.id_alumno) {
+      const [a] = await pool.query(
+        "SELECT nombre, apellido, email FROM alumnos WHERE id_alumno = ?",
+        [user.id_alumno]
+      );
+      extraData = a[0] || {};
+    } else if (user.id_profesor) {
+      const [p] = await pool.query(
+        "SELECT nombre, apellido, email FROM profesores WHERE id_profesor = ?",
+        [user.id_profesor]
+      );
+      extraData = p[0] || {};
+    }
+
     res.json({
-      message: 'Login exitoso',
+      message: "Login exitoso ✅",
       usuario: {
-        id: user.id,
-        nombre: user.nombre,
-        apellido: user.apellido,
-        tipo: user.tipo
-      }
+        id: user.id_usuario,
+        username: user.username,
+        rol: user.rol,
+        ...extraData,
+      },
     });
   } catch (err) {
+    console.error("Error en login:", err);
     next(err);
   }
 }
