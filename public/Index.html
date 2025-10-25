@@ -80,13 +80,13 @@
     const mensaje = document.getElementById("mensaje");
     const materiaSelect = document.getElementById("materiaSelect");
 
-    // 🧍‍♂️ Verificar acceso
-    if (!usuario || usuario.tipo !== "profesor") {
-      alert("Acceso no autorizado. Inicia sesión como profesor.");
-      window.location.href = "login.html";
-    } else {
-      info.textContent = `👨‍🏫 Bienvenido, Prof. ${usuario.nombre} ${usuario.apellido}`;
-      cargarMateriasProfesor(usuario.id);
+    // Verificar acceso profesor
+  if (!usuario || usuario.rol !== "profesor") {
+    alert("Acceso no autorizado. Inicia sesión como profesor.");
+    window.location.href = "login.html";
+    }   else {
+    info.textContent = `👨‍🏫 Bienvenido, Prof. ${usuario.nombre} ${usuario.apellido}`;
+    cargarMateriasProfesor(usuario.id);
     }
 
     // 🔹 Cargar solo las materias del profesor logueado

@@ -73,15 +73,20 @@ export async function register(req, res, next) {
  */
 export async function login(req, res, next) {
   try {
-    const { username, password } = req.body;
+    const { email, password } = req.body;
 
-    if (!username || !password) {
-      return res.status(400).json({ error: "Faltan username o password" });
+    if (!email || !password) {
+      return res.status(400).json({ error: "Faltan email o password" });
     }
 
+    // Buscar usuario por email en alumnos y profesores
     const [rows] = await pool.query(
-      "SELECT id_usuario, username, password, rol, id_alumno, id_profesor FROM usuarios WHERE username = ?",
-      [username]
+      `SELECT u.id_usuario, u.username, u.password, u.rol, u.id_alumno, u.id_profesor
+       FROM usuarios u
+       LEFT JOIN alumnos a ON u.id_alumno = a.id_alumno
+       LEFT JOIN profesores p ON u.id_profesor = p.id_profesor
+       WHERE a.email = ? OR p.email = ?`,
+      [email, email]
     );
 
     if (rows.length === 0)
@@ -111,7 +116,6 @@ export async function login(req, res, next) {
       message: "Login exitoso ✅",
       usuario: {
         id: user.id_usuario,
-        username: user.username,
         rol: user.rol,
         ...extraData,
       },
