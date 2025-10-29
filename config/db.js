@@ -3,14 +3,18 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const pool = mysql.createPool({
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'sistema_asistencias',
-  port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 3306,
+  host: process.env.DB_HOST || '149.50.150.216',
+  user: process.env.DB_USER || 'user_asistencia',
+  password: process.env.DB_PASSWORD || 'userits25',
+  database: process.env.DB_NAME || 'asistencia',
+  port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 33366,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
 });
 
 export default pool;
+
+//Base: asistencia
+//User: user_asistencia
+//Pass: userits25
