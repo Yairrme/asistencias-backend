@@ -19,9 +19,21 @@
     th {
       background-color: #f3f3f3;
     }
-    select, button {
+    .error-btn {
+      background-color: #ff9800;
+      color: white;
+      border: none;
+      padding: 5px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .error-btn:hover {
+      background-color: #e68900;
+    }
+    select {
       padding: 8px;
-      margin: 10px 0;
+      margin-top: 10px;
+      border-radius: 6px;
     }
     .cerrar-sesion {
       background-color: #555;
@@ -30,7 +42,7 @@
       border: none;
       border-radius: 6px;
       cursor: pointer;
-      margin-top: 10px;
+      margin-top: 20px;
     }
   </style>
 </head>
@@ -39,10 +51,10 @@
     <h1>Panel del Alumno</h1>
     <p id="info"></p>
 
-    <!-- Selector de materias -->
+    <!-- 🔹 Selector de materia -->
     <label for="materiaSelect">Seleccione la materia:</label>
     <select id="materiaSelect">
-      <option value="">-- Todas --</option>
+      <option value="">-- Seleccione materia --</option>
     </select>
 
     <table id="tablaAsistencias">
@@ -51,10 +63,13 @@
           <th>Fecha</th>
           <th>Materia</th>
           <th>Estado</th>
+          <th>Acción</th>
         </tr>
       </thead>
       <tbody></tbody>
     </table>
+
+    <p id="mensaje" class="mensaje"></p>
 
     <button class="cerrar-sesion" id="logoutBtn">Cerrar sesión</button>
   </div>
@@ -66,21 +81,28 @@
     const mensaje = document.getElementById("mensaje");
     const materiaSelect = document.getElementById("materiaSelect");
 
-    // Verificar sesión
     if (!usuario || usuario.rol !== "alumno") {
       alert("Acceso no autorizado. Inicia sesión como alumno.");
       window.location.href = "login.html";
     } else {
       info.textContent = `👨‍🎓 Bienvenido, ${usuario.nombre} ${usuario.apellido}`;
-      cargarMaterias();
-      cargarAsistencias();
+      cargarMaterias(usuario.id_alumno || usuario.id);
     }
 
-    // 🔹 Cargar materias del alumno en el selector
-    async function cargarMaterias() {
+    // 🔹 Cargar materias del alumno desde la API
+    async function cargarMaterias(alumnoId) {
       try {
-        const res = await fetch(`http://localhost:3000/api/materias/por-alumno/${usuario.id}`);
+        const res = await fetch(`http://localhost:3000/api/materias/por-alumno/${alumnoId}`);
         const materias = await res.json();
+
+        if (materias.length === 0) {
+          const opt = document.createElement("option");
+          opt.value = "";
+          opt.textContent = "Sin materias asignadas";
+          materiaSelect.appendChild(opt);
+          return;
+        }
+
         materias.forEach(m => {
           const opt = document.createElement("option");
           opt.value = m.id_materia;
@@ -89,38 +111,68 @@
         });
       } catch (error) {
         console.error("Error al cargar materias:", error);
+        mensaje.textContent = "⚠️ Error al obtener las materias.";
       }
     }
 
-    // 🔹 Cargar asistencias filtrando por materia si se selecciona
-    materiaSelect.addEventListener("change", cargarAsistencias);
-
-    async function cargarAsistencias() {
-      try {
-        const materiaId = materiaSelect.value;
-        let url = `http://localhost:3000/asistencias/por-alumno/${usuario.id}`;
-        if (materiaId) url += `?materiaId=${materiaId}`;
-
-        const res = await fetch(url);
-        const asistencias = await res.json();
-
+    // 🔹 Cargar asistencias cuando se seleccione una materia
+    materiaSelect.addEventListener("change", async () => {
+      const materiaId = materiaSelect.value;
+      if (!materiaId) {
         tabla.innerHTML = "";
-        if (asistencias.length === 0) {
-          tabla.innerHTML = `<tr><td colspan="3">No hay asistencias registradas.</td></tr>`;
+        return;
+      }
+      cargarAsistencias(materiaId);
+    });
+
+    async function cargarAsistencias(materiaId) {
+      try {
+        const res = await fetch(`http://localhost:3000/api/asistencias/por-alumno/${usuario.id}?materia=${materiaId}`);
+        const asistencias = await res.json();
+        tabla.innerHTML = "";
+
+        if (!asistencias || asistencias.length === 0) {
+          tabla.innerHTML = `<tr><td colspan="4">No hay asistencias registradas aún.</td></tr>`;
           return;
         }
 
-        asistencias.forEach(a => {
+        asistencias.forEach(asistencia => {
           const fila = document.createElement("tr");
           fila.innerHTML = `
-            <td>${a.fecha || "Sin fecha"}</td>
-            <td>${a.materia || "Desconocida"}</td>
-            <td>${a.estado}</td>
+            <td>${asistencia.fecha || "Sin fecha"}</td>
+            <td>${asistencia.materia || "Desconocida"}</td>
+            <td>${asistencia.estado}</td>
+            <td><button class="error-btn" onclick="marcarError(${asistencia.id})">Reportar error</button></td>
           `;
           tabla.appendChild(fila);
         });
       } catch (error) {
         console.error("Error al cargar asistencias:", error);
+        mensaje.textContent = "⚠️ Error al obtener tus asistencias.";
+      }
+    }
+
+    async function marcarError(id) {
+      try {
+        const confirmacion = confirm("¿Deseas reportar un error en esta asistencia?");
+        if (!confirmacion) return;
+
+        const res = await fetch(`http://localhost:3000/api/asistencias/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ estado: "Justificado" })
+        });
+
+        if (res.ok) {
+          mensaje.textContent = "✅ Asistencia marcada como justificada.";
+          const materiaId = materiaSelect.value;
+          if (materiaId) cargarAsistencias(materiaId);
+        } else {
+          mensaje.textContent = "❌ No se pudo actualizar la asistencia.";
+        }
+      } catch (error) {
+        console.error(error);
+        mensaje.textContent = "⚠️ Error al conectar con el servidor.";
       }
     }
 

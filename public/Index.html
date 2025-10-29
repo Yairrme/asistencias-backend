@@ -80,42 +80,33 @@
     const mensaje = document.getElementById("mensaje");
     const materiaSelect = document.getElementById("materiaSelect");
 
-    // Verificar acceso profesor
-  if (!usuario || usuario.rol !== "profesor") {
-    alert("Acceso no autorizado. Inicia sesión como profesor.");
-    window.location.href = "login.html";
-    }   else {
-    info.textContent = `👨‍🏫 Bienvenido, Prof. ${usuario.nombre} ${usuario.apellido}`;
-    cargarMateriasProfesor(usuario.id);
+    // ✅ Verificar acceso profesor
+    if (!usuario || usuario.rol !== "profesor") {
+      alert("Acceso no autorizado. Inicia sesión como profesor.");
+      window.location.href = "login.html";
+    } else {
+      info.textContent = `👨‍🏫 Bienvenido, Prof. ${usuario.nombre} ${usuario.apellido}`;
+      cargarMateriasProfesor(usuario.id_profesor || usuario.id);
     }
 
-    // 🔹 Cargar solo las materias del profesor logueado
+    // ✅ Cargar materias asignadas al profesor logueado
     async function cargarMateriasProfesor(profesorId) {
       try {
-        const res = await fetch("http://localhost:3000/clases");
-        const clases = await res.json();
+        const res = await fetch(`http://localhost:3000/api/materias/por-profesor/${profesorId}`);
+        const materias = await res.json();
 
-        // Filtrar solo las materias del profesor
-        const materias = [];
-        clases.forEach(c => {
-          if (c.profesor_id === profesorId && !materias.some(m => m.id === c.materia_id)) {
-            materias.push({ id: c.materia_id, nombre: c.materia });
-          }
-        });
+        materiaSelect.innerHTML = '<option value="">-- Seleccionar --</option>';
 
-        // Si no hay clases con profesor_id (fallback)
-        if (materias.length === 0) {
-          const materiasRes = await fetch("http://localhost:3000/materias");
-          const todas = await materiasRes.json();
-          todas.forEach(m => {
-            if (m.profesor_id === profesorId) materias.push(m);
-          });
+        if (!materias || materias.length === 0) {
+          const opt = document.createElement("option");
+          opt.textContent = "Sin materias asignadas";
+          materiaSelect.appendChild(opt);
+          return;
         }
 
-        // Cargar en el select
         materias.forEach(m => {
           const opt = document.createElement("option");
-          opt.value = m.id;
+          opt.value = m.id_materia;
           opt.textContent = m.nombre;
           materiaSelect.appendChild(opt);
         });
@@ -125,7 +116,7 @@
       }
     }
 
-    // 🔹 Cargar alumnos al elegir una materia
+    // ✅ Cargar alumnos cuando se selecciona una materia
     materiaSelect.addEventListener("change", async () => {
       const materiaId = materiaSelect.value;
       if (materiaId) {
@@ -137,7 +128,7 @@
 
     async function cargarAlumnos(materiaId) {
       try {
-        const res = await fetch("http://localhost:3000/alumnos");
+        const res = await fetch(`http://localhost:3000/api/alumnos/por-materia/${materiaId}`);
         const alumnos = await res.json();
         tabla.innerHTML = "";
 
@@ -162,19 +153,18 @@
       }
     }
 
-    // 🔹 Registrar asistencia
+    // ✅ Registrar asistencia
     async function registrarAsistencia(alumnoId, estado, materiaId) {
       try {
-        const clasesRes = await fetch("http://localhost:3000/clases");
-        const clases = await clasesRes.json();
-        const clase = clases.find(c => c.materia_id == materiaId);
+        const claseRes = await fetch(`http://localhost:3000/api/clases/por-materia/${materiaId}`);
+        const clase = await claseRes.json();
 
-        if (!clase) {
-          mensaje.textContent = "⚠️ No se encontró clase para esa materia.";
-          return;
+        if (!clase || clase.length === 0) {
+        mensaje.textContent = "⚠️ No se encontró clase para esa materia.";
+        return;
         }
 
-        const res = await fetch("http://localhost:3000/asistencias", {
+        const res = await fetch("http://localhost:3000/api/asistencias", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -196,7 +186,7 @@
       }
     }
 
-    // 🔹 Cerrar sesión
+    // ✅ Cerrar sesión
     document.getElementById("logoutBtn").addEventListener("click", () => {
       localStorage.removeItem("usuario");
       window.location.href = "login.html";

@@ -30,4 +30,23 @@ router.get("/por-alumno/:alumnoId", async (req, res, next) => {
   }
 });
 
+// GET /api/materias/por-profesor/:profesorId
+router.get("/por-profesor/:profesorId", async (req, res, next) => {
+  const { profesorId } = req.params;
+  try {
+    const [materias] = await pool.query(
+      `SELECT DISTINCT m.id_materia, m.nombre
+       FROM materias m
+       JOIN clase_materia cm ON cm.id_materia = m.id_materia
+       WHERE m.id_profesor = ?`,
+      [profesorId]
+    );
+
+    res.json(materias);
+  } catch (err) {
+    console.error("Error al obtener materias del profesor:", err);
+    next(err);
+  }
+});
+
 export default router;

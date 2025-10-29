@@ -115,7 +115,9 @@ export async function login(req, res, next) {
     res.json({
       message: "Login exitoso ✅",
       usuario: {
-        id: user.id_usuario,
+        id_usuario: user.id_usuario,
+        id_alumno: user.id_alumno,
+        id_profesor: user.id_profesor,
         rol: user.rol,
         ...extraData,
       },
