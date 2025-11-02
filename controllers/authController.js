@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 /**
  * ✅ Registrar nuevo usuario (alumno o profesor)
  */
-export async function register(req, res, next) {
+export async function register(req, res) {
   try {
     const { username, password, rol, nombre, apellido, email } = req.body;
 
@@ -26,20 +26,19 @@ export async function register(req, res, next) {
     const hashed = await bcrypt.hash(password, salt);
 
     // Crear registro base en usuarios
-    const [result] = await pool.query(
+    const [userResult] = await pool.query(
       "INSERT INTO usuarios (username, password, rol) VALUES (?, ?, ?)",
       [username, hashed, rol]
     );
 
-    const usuarioId = result.insertId;
+    const usuarioId = userResult.insertId;
 
-    // Si el rol es profesor o alumno, crear registro correspondiente
+    // Crear registro asociado según el rol
     if (rol === "alumno") {
       const [alumnoResult] = await pool.query(
         "INSERT INTO alumnos (nombre, apellido, email) VALUES (?, ?, ?)",
         [nombre || username, apellido || "", email || null]
       );
-
       const alumnoId = alumnoResult.insertId;
       await pool.query(
         "UPDATE usuarios SET id_alumno = ? WHERE id_usuario = ?",
@@ -50,7 +49,6 @@ export async function register(req, res, next) {
         "INSERT INTO profesores (nombre, apellido, email) VALUES (?, ?, ?)",
         [nombre || username, apellido || "", email || null]
       );
-
       const profId = profResult.insertId;
       await pool.query(
         "UPDATE usuarios SET id_profesor = ? WHERE id_usuario = ?",
@@ -59,34 +57,36 @@ export async function register(req, res, next) {
     }
 
     res.status(201).json({
-      message: "Usuario registrado correctamente",
+      message: "Usuario registrado correctamente ✅",
       usuarioId,
     });
   } catch (err) {
-    console.error("Error en register:", err);
-    next(err);
+    console.error("Error en register:", err.message);
+    res.status(500).json({ error: "Error interno en el registro" });
   }
 }
 
 /**
- * ✅ Iniciar sesión
+ * ✅ Iniciar sesión (por email o username)
  */
-export async function login(req, res, next) {
+export async function login(req, res) {
   try {
-    const { email, password } = req.body;
+    const { email, username, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ error: "Faltan email o password" });
+    if ((!email && !username) || !password) {
+      return res.status(400).json({
+        error: "Debe enviar username o email, y el password",
+      });
     }
 
-    // Buscar usuario por email en alumnos y profesores
+    // Buscar usuario por email o username
     const [rows] = await pool.query(
       `SELECT u.id_usuario, u.username, u.password, u.rol, u.id_alumno, u.id_profesor
        FROM usuarios u
        LEFT JOIN alumnos a ON u.id_alumno = a.id_alumno
        LEFT JOIN profesores p ON u.id_profesor = p.id_profesor
-       WHERE a.email = ? OR p.email = ?`,
-      [email, email]
+       WHERE u.username = ? OR a.email = ? OR p.email = ?`,
+      [username || null, email || null, email || null]
     );
 
     if (rows.length === 0)
@@ -96,7 +96,7 @@ export async function login(req, res, next) {
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(401).json({ error: "Credenciales inválidas" });
 
-    // Recuperar datos adicionales si es alumno o profesor
+    // Datos adicionales según el rol
     let extraData = {};
     if (user.id_alumno) {
       const [a] = await pool.query(
@@ -116,14 +116,15 @@ export async function login(req, res, next) {
       message: "Login exitoso ✅",
       usuario: {
         id_usuario: user.id_usuario,
+        username: user.username,
+        rol: user.rol,
         id_alumno: user.id_alumno,
         id_profesor: user.id_profesor,
-        rol: user.rol,
         ...extraData,
       },
     });
   } catch (err) {
-    console.error("Error en login:", err);
-    next(err);
+    console.error("Error en login:", err.message);
+    res.status(500).json({ error: "Error interno al iniciar sesión" });
   }
 }

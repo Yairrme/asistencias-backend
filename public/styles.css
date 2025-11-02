@@ -1,3 +1,4 @@
+/* 🌐 Estilos generales */
 body {
   font-family: 'Segoe UI', sans-serif;
   background: #f7f9fc;
@@ -6,40 +7,57 @@ body {
   color: #333;
 }
 
+/* 🏷️ Titulos */
 h1 {
   text-align: center;
   color: #2c3e50;
   margin-top: 20px;
 }
 
-.login-container {
-  max-width: 350px;
-  margin: 100px auto;
-  padding: 25px;
+/* 🧱 Contenedor principal */
+.container {
+  max-width: 500px;
+  margin: 60px auto;
+  padding: 30px;
   background: #fff;
   border-radius: 12px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* 📋 Formularios */
+form {
+  display: flex;
+  flex-direction: column;
+}
+
+label {
+  font-weight: 600;
+  margin-top: 10px;
 }
 
 input, select, button {
   width: 100%;
   padding: 10px;
-  margin-top: 10px;
+  margin-top: 8px;
   border-radius: 8px;
   border: 1px solid #ccc;
+  font-size: 15px;
 }
 
+/* 🎨 Botones */
 button {
   background-color: #3498db;
   color: white;
   border: none;
   cursor: pointer;
+  transition: 0.2s ease;
 }
 
 button:hover {
   background-color: #2980b9;
 }
 
+/* 📊 Tablas */
 table {
   width: 90%;
   margin: 20px auto;
@@ -55,7 +73,75 @@ th, td {
   border-bottom: 1px solid #eee;
 }
 
-select {
+th {
+  background: #ecf0f1;
+  color: #2c3e50;
+}
+
+/* 📢 Mensajes */
+.mensaje {
+  text-align: center;
+  margin-top: 15px;
+  font-weight: 500;
+}
+
+.mensaje.ok {
+  color: #2ecc71;
+}
+
+.mensaje.error {
+  color: #e74c3c;
+}
+
+/* 🔘 Botones de asistencia */
+.presente {
+  background-color: #4caf50;
+  color: white;
+}
+
+.ausente {
+  background-color: #f44336;
+  color: white;
+}
+
+.error-btn {
+  background-color: #ff9800;
+  color: white;
+}
+
+.error-btn:hover {
+  background-color: #e68900;
+}
+
+/* 🚪 Botón cerrar sesión */
+.cerrar-sesion {
+  background-color: #555;
+  color: white;
+  padding: 10px 15px;
+  border: none;
   border-radius: 6px;
-  padding: 6px;
+  cursor: pointer;
+  display: block;
+  margin: 20px auto 0 auto;
+}
+
+.cerrar-sesion:hover {
+  background-color: #333;
+}
+
+/* 📱 Responsivo */
+@media (max-width: 600px) {
+  .container {
+    width: 90%;
+    padding: 20px;
+  }
+
+  table {
+    width: 100%;
+    font-size: 14px;
+  }
+
+  input, select, button {
+    font-size: 14px;
+  }
 }

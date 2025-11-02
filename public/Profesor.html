@@ -28,11 +28,10 @@
     }
     .presente { background-color: #4caf50; color: white; }
     .ausente { background-color: #f44336; color: white; }
-    .justificado { background-color: #ff9800; color: white; }
-    .tarde { background-color: #2196f3; color: white; }
     select {
       padding: 8px;
       margin-top: 10px;
+      border-radius: 6px;
     }
     .cerrar-sesion {
       background-color: #555;
@@ -50,7 +49,6 @@
     <h1>Panel del Profesor</h1>
     <p id="info"></p>
 
-    <!-- 🔹 Selector de materia -->
     <label for="materiaSelect">Seleccione la materia:</label>
     <select id="materiaSelect">
       <option value="">-- Seleccionar --</option>
@@ -69,7 +67,6 @@
     </table>
 
     <p id="mensaje" class="mensaje"></p>
-
     <button class="cerrar-sesion" id="logoutBtn">Cerrar sesión</button>
   </div>
 
@@ -80,7 +77,6 @@
     const mensaje = document.getElementById("mensaje");
     const materiaSelect = document.getElementById("materiaSelect");
 
-    // ✅ Verificar acceso profesor
     if (!usuario || usuario.rol !== "profesor") {
       alert("Acceso no autorizado. Inicia sesión como profesor.");
       window.location.href = "login.html";
@@ -89,7 +85,6 @@
       cargarMateriasProfesor(usuario.id_profesor || usuario.id);
     }
 
-    // ✅ Cargar materias asignadas al profesor logueado
     async function cargarMateriasProfesor(profesorId) {
       try {
         const res = await fetch(`http://localhost:3000/api/materias/por-profesor/${profesorId}`);
@@ -116,7 +111,6 @@
       }
     }
 
-    // ✅ Cargar alumnos cuando se selecciona una materia
     materiaSelect.addEventListener("change", async () => {
       const materiaId = materiaSelect.value;
       if (materiaId) {
@@ -135,14 +129,12 @@
         alumnos.forEach(alumno => {
           const fila = document.createElement("tr");
           fila.innerHTML = `
-            <td>${alumno.id}</td>
+            <td>${alumno.id_alumno}</td>
             <td>${alumno.nombre}</td>
             <td>${alumno.apellido}</td>
             <td>
-              <button class="presente" onclick="registrarAsistencia(${alumno.id}, 'Presente', ${materiaId})">Presente</button>
-              <button class="ausente" onclick="registrarAsistencia(${alumno.id}, 'Ausente', ${materiaId})">Ausente</button>
-              <button class="justificado" onclick="registrarAsistencia(${alumno.id}, 'Justificado', ${materiaId})">Justificado</button>
-              <button class="tarde" onclick="registrarAsistencia(${alumno.id}, 'Tarde', ${materiaId})">Tarde</button>
+              <button class="presente" onclick="registrarAsistencia(${alumno.id_alumno}, 1, ${materiaId})">Presente</button>
+              <button class="ausente" onclick="registrarAsistencia(${alumno.id_alumno}, 0, ${materiaId})">Ausente</button>
             </td>
           `;
           tabla.appendChild(fila);
@@ -153,25 +145,12 @@
       }
     }
 
-    // ✅ Registrar asistencia
-    async function registrarAsistencia(alumnoId, estado, materiaId) {
+    async function registrarAsistencia(id_alumno, presente, id_materia) {
       try {
-        const claseRes = await fetch(`http://localhost:3000/api/clases/por-materia/${materiaId}`);
-        const clase = await claseRes.json();
-
-        if (!clase || clase.length === 0) {
-        mensaje.textContent = "⚠️ No se encontró clase para esa materia.";
-        return;
-        }
-
         const res = await fetch("http://localhost:3000/api/asistencias", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            alumno_id: alumnoId,
-            clase_id: clase.id,
-            estado,
-          }),
+          body: JSON.stringify({ id_alumno, id_materia, presente }),
         });
 
         const data = await res.json();
@@ -186,7 +165,6 @@
       }
     }
 
-    // ✅ Cerrar sesión
     document.getElementById("logoutBtn").addEventListener("click", () => {
       localStorage.removeItem("usuario");
       window.location.href = "login.html";

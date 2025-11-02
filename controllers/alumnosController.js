@@ -3,7 +3,7 @@ import pool from "../config/db.js";
 /**
  * ✅ Obtener todos los alumnos, o filtrar por materia si se pasa ?materia=ID
  */
-export async function getAllAlumnos(req, res, next) {
+export async function getAllAlumnos(req, res) {
   try {
     const { materia } = req.query;
 
@@ -14,6 +14,11 @@ export async function getAllAlumnos(req, res, next) {
          FROM alumnos
          ORDER BY apellido, nombre`
       );
+
+      if (rows.length === 0) {
+        return res.status(404).json({ message: "No hay alumnos registrados" });
+      }
+
       return res.json(rows);
     }
 
@@ -27,6 +32,12 @@ export async function getAllAlumnos(req, res, next) {
       [materia]
     );
 
+    if (rows.length === 0) {
+      return res.status(404).json({
+        message: "No se encontraron alumnos para la materia indicada",
+      });
+    }
+
     res.json(rows);
   } catch (err) {
     console.error("Error en getAllAlumnos:", err);
@@ -37,16 +48,33 @@ export async function getAllAlumnos(req, res, next) {
   }
 }
 
-// Esto es para relacionar alumno con clase
-export async function asignarClaseAAlumno(req, res, next) {
+/**
+ * ✅ Relacionar alumno con clase (alumno_clase)
+ */
+export async function asignarClaseAAlumno(req, res) {
   try {
     const { id_alumno, id_clase } = req.body;
 
     if (!id_alumno || !id_clase) {
-      return res.status(400).json({ error: "Faltan campos: id_alumno o id_clase" });
+      return res
+        .status(400)
+        .json({ error: "Faltan campos: id_alumno o id_clase" });
     }
 
-    const [result] = await pool.query(
+    // Verificar si ya existe la relación
+    const [existe] = await pool.query(
+      "SELECT * FROM alumno_clase WHERE id_alumno = ? AND id_clase = ?",
+      [id_alumno, id_clase]
+    );
+
+    if (existe.length > 0) {
+      return res
+        .status(409)
+        .json({ message: "El alumno ya está asignado a esta clase" });
+    }
+
+    // Crear la relación
+    await pool.query(
       "INSERT INTO alumno_clase (id_alumno, id_clase) VALUES (?, ?)",
       [id_alumno, id_clase]
     );
@@ -58,6 +86,9 @@ export async function asignarClaseAAlumno(req, res, next) {
     });
   } catch (err) {
     console.error("Error asignando alumno a clase:", err);
-    next(err);
+    res.status(500).json({
+      error: "Error al asignar alumno a la clase",
+      details: err.message,
+    });
   }
 }

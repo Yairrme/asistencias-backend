@@ -44,15 +44,17 @@
         if (res.ok) {
           mensaje.textContent = "✅ Inicio de sesión exitoso";
 
-          // Guardamos el usuario en localStorage
+          // Guardar usuario en localStorage
           localStorage.setItem("usuario", JSON.stringify(data.usuario));
 
-          // Redirigimos según el tipo
-         if (data.usuario.rol === "profesor") {
-        window.location.href = "index.html";
-        } else if (data.usuario.rol === "alumno") {
-        window.location.href = "alumno.html";
-        }
+          // Redirigir según el rol
+          if (data.usuario.rol === "profesor") {
+            window.location.href = "profesor.html";
+          } else if (data.usuario.rol === "alumno") {
+            window.location.href = "alumno.html";
+          } else {
+            mensaje.textContent = "⚠️ Rol desconocido.";
+          }
         } else {
           mensaje.textContent = "❌ " + (data.error || data.message || "Credenciales incorrectas");
         }

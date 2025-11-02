@@ -27,14 +27,6 @@
       border-radius: 4px;
       cursor: pointer;
     }
-    .error-btn:hover {
-      background-color: #e68900;
-    }
-    select {
-      padding: 8px;
-      margin-top: 10px;
-      border-radius: 6px;
-    }
     .cerrar-sesion {
       background-color: #555;
       color: white;
@@ -51,7 +43,6 @@
     <h1>Panel del Alumno</h1>
     <p id="info"></p>
 
-    <!-- 🔹 Selector de materia -->
     <label for="materiaSelect">Seleccione la materia:</label>
     <select id="materiaSelect">
       <option value="">-- Seleccione materia --</option>
@@ -60,7 +51,7 @@
     <table id="tablaAsistencias">
       <thead>
         <tr>
-          <th>Fecha</th>
+          <th>ID</th>
           <th>Materia</th>
           <th>Estado</th>
           <th>Acción</th>
@@ -70,7 +61,6 @@
     </table>
 
     <p id="mensaje" class="mensaje"></p>
-
     <button class="cerrar-sesion" id="logoutBtn">Cerrar sesión</button>
   </div>
 
@@ -89,7 +79,6 @@
       cargarMaterias(usuario.id_alumno || usuario.id);
     }
 
-    // 🔹 Cargar materias del alumno desde la API
     async function cargarMaterias(alumnoId) {
       try {
         const res = await fetch(`http://localhost:3000/api/materias/por-alumno/${alumnoId}`);
@@ -115,7 +104,6 @@
       }
     }
 
-    // 🔹 Cargar asistencias cuando se seleccione una materia
     materiaSelect.addEventListener("change", async () => {
       const materiaId = materiaSelect.value;
       if (!materiaId) {
@@ -127,7 +115,7 @@
 
     async function cargarAsistencias(materiaId) {
       try {
-        const res = await fetch(`http://localhost:3000/api/asistencias/por-alumno/${usuario.id}?materia=${materiaId}`);
+        const res = await fetch(`http://localhost:3000/api/asistencias/por-alumno/${usuario.id_alumno || usuario.id}`);
         const asistencias = await res.json();
         tabla.innerHTML = "";
 
@@ -139,9 +127,9 @@
         asistencias.forEach(asistencia => {
           const fila = document.createElement("tr");
           fila.innerHTML = `
-            <td>${asistencia.fecha || "Sin fecha"}</td>
-            <td>${asistencia.materia || "Desconocida"}</td>
-            <td>${asistencia.estado}</td>
+            <td>${asistencia.id}</td>
+            <td>${asistencia.materia}</td>
+            <td>${asistencia.estado ? "Presente" : "Ausente"}</td>
             <td><button class="error-btn" onclick="marcarError(${asistencia.id})">Reportar error</button></td>
           `;
           tabla.appendChild(fila);
@@ -160,11 +148,11 @@
         const res = await fetch(`http://localhost:3000/api/asistencias/${id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ estado: "Justificado" })
+          body: JSON.stringify({ presente: 1 })
         });
 
         if (res.ok) {
-          mensaje.textContent = "✅ Asistencia marcada como justificada.";
+          mensaje.textContent = "✅ Asistencia actualizada.";
           const materiaId = materiaSelect.value;
           if (materiaId) cargarAsistencias(materiaId);
         } else {
@@ -176,7 +164,6 @@
       }
     }
 
-    // 🔹 Cerrar sesión
     document.getElementById("logoutBtn").addEventListener("click", () => {
       localStorage.removeItem("usuario");
       window.location.href = "login.html";

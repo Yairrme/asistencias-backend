@@ -17,18 +17,29 @@ router.get("/por-alumno/:alumnoId", getAsistenciasByAlumno);
 // Registrar una nueva asistencia
 router.post("/", createAsistencia);
 
-// Actualizar asistencia (estado o comentario opcional)
+// Actualizar asistencia (solo el campo "presente")
 router.patch("/:id", async (req, res) => {
   const { id } = req.params;
-  const { presente, observacion } = req.body;
+  const { presente } = req.body;
 
   try {
+    if (typeof presente === "undefined") {
+      return res.status(400).json({
+        error: "Debe enviar el campo 'presente' (0 = ausente, 1 = presente)",
+      });
+    }
+
     const query = `
       UPDATE asistencias 
-      SET presente = ?, observacion = ?
+      SET presente = ?
       WHERE id_asistencia = ?;
     `;
-    await db.query(query, [presente, observacion || null, id]);
+    const [result] = await db.query(query, [Number(presente), id]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Asistencia no encontrada" });
+    }
+
     res.json({ message: "Asistencia actualizada correctamente ✅" });
   } catch (error) {
     console.error("Error al actualizar asistencia:", error);

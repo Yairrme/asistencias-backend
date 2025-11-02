@@ -3,7 +3,7 @@ import pool from "../config/db.js";
 /**
  * ✅ Obtener todas las clases con sus materias y profesor asociado
  */
-export async function getAllClases(req, res, next) {
+export async function getAllClases(req, res) {
   try {
     const [rows] = await pool.query(
       `SELECT 
@@ -20,6 +20,11 @@ export async function getAllClases(req, res, next) {
        LEFT JOIN profesores p ON m.id_profesor = p.id_profesor
        ORDER BY c.anio DESC, c.nombre ASC`
     );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "No hay clases registradas" });
+    }
+
     res.json(rows);
   } catch (err) {
     console.error("Error en getAllClases:", err);
@@ -33,9 +38,14 @@ export async function getAllClases(req, res, next) {
 /**
  * ✅ Obtener las materias que dicta un profesor específico
  */
-export async function getMateriasPorProfesor(req, res, next) {
+export async function getMateriasPorProfesor(req, res) {
   try {
     const { profesorId } = req.params;
+
+    if (!profesorId || isNaN(profesorId)) {
+      return res.status(400).json({ error: "El parámetro profesorId debe ser numérico" });
+    }
+
     const [rows] = await pool.query(
       `SELECT 
           m.id_materia,
@@ -50,18 +60,27 @@ export async function getMateriasPorProfesor(req, res, next) {
        ORDER BY c.anio DESC, c.nombre ASC`,
       [profesorId]
     );
+
+    if (rows.length === 0) {
+      return res.status(404).json({
+        message: "El profesor no tiene materias asignadas",
+      });
+    }
+
     res.json(rows);
   } catch (err) {
     console.error("Error en getMateriasPorProfesor:", err);
     res.status(500).json({
-      error: "Error interno del servidor",
+      error: "Error al obtener materias por profesor",
       details: err.message,
     });
   }
 }
 
-//Crear una nueva clase
-export async function createClase(req, res, next) {
+/**
+ * ✅ Crear una nueva clase
+ */
+export async function createClase(req, res) {
   try {
     const { nombre, anio } = req.body;
 
@@ -80,11 +99,17 @@ export async function createClase(req, res, next) {
     });
   } catch (err) {
     console.error("Error creando clase:", err);
-    next(err);
+    res.status(500).json({
+      error: "Error al crear la clase",
+      details: err.message,
+    });
   }
 }
 
-export async function asignarMateriaAClase(req, res, next) {
+/**
+ * ✅ Asignar una materia a una clase
+ */
+export async function asignarMateriaAClase(req, res) {
   try {
     const { id_clase, id_materia } = req.body;
 
@@ -92,7 +117,23 @@ export async function asignarMateriaAClase(req, res, next) {
       return res.status(400).json({ error: "Faltan campos: id_clase o id_materia" });
     }
 
-    const [result] = await pool.query(
+    if (isNaN(id_clase) || isNaN(id_materia)) {
+      return res.status(400).json({ error: "Los IDs deben ser numéricos" });
+    }
+
+    // Verificar si ya existe esa relación
+    const [existe] = await pool.query(
+      "SELECT * FROM clase_materia WHERE id_clase = ? AND id_materia = ?",
+      [id_clase, id_materia]
+    );
+
+    if (existe.length > 0) {
+      return res.status(409).json({
+        message: "La materia ya está asignada a esta clase",
+      });
+    }
+
+    await pool.query(
       "INSERT INTO clase_materia (id_clase, id_materia) VALUES (?, ?)",
       [id_clase, id_materia]
     );
@@ -104,6 +145,9 @@ export async function asignarMateriaAClase(req, res, next) {
     });
   } catch (err) {
     console.error("Error asignando materia a clase:", err);
-    next(err);
+    res.status(500).json({
+      error: "Error al asignar materia a clase",
+      details: err.message,
+    });
   }
 }
