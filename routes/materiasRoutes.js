@@ -8,7 +8,15 @@ const router = express.Router();
 router.post("/", createMateria);
 
 // Obtener todas las materias
-router.get("/", getAllMaterias);
+router.get("/", async (req, res) => {
+  try {
+    const [rows] = await pool.query("SELECT id_materia, nombre FROM materias");
+    res.json(rows);
+  } catch (err) {
+    console.error("Error al obtener materias:", err);
+    res.status(500).json({ error: "Error al obtener materias" });
+  }
+});
 
 // Obtener materias por alumno
 router.get("/por-alumno/:alumnoId", async (req, res) => {

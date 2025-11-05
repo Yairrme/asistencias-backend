@@ -39,4 +39,37 @@ router.get("/por-materia/:materiaId", async (req, res, next) => {
 // Asignar alumno a clase
 router.post("/clase", asignarClaseAAlumno);
 
+// Asignar alumno a materia
+router.post("/asignar", async (req, res) => {
+  try {
+    const { id_alumno, id_materia } = req.body;
+
+    if (!id_alumno || !id_materia) {
+      return res.status(400).json({ error: "Faltan datos (id_alumno o id_materia)" });
+    }
+
+    // Podés tener una tabla específica: alumno_materia
+    await db.query(
+      "INSERT INTO alumno_materia (id_alumno, id_materia) VALUES (?, ?)",
+      [id_alumno, id_materia]
+    );
+
+    res.json({ message: "Alumno asignado correctamente a la materia" });
+  } catch (err) {
+    console.error("Error al asignar alumno a materia:", err);
+    res.status(500).json({ error: "Error al asignar alumno a materia" });
+  }
+});
+
+// Obtener todos los alumnos
+router.get("/", async (req, res) => {
+  try {
+    const [rows] = await db.query("SELECT id_alumno, nombre, apellido FROM alumnos");
+    res.json(rows);
+  } catch (err) {
+    console.error("Error al obtener alumnos:", err);
+    res.status(500).json({ error: "Error al obtener alumnos" });
+  }
+});
+
 export default router;

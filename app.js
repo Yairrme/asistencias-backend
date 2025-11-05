@@ -10,6 +10,7 @@ import alumnosRoutes from "./routes/alumnosRoutes.js";
 import clasesRoutes from "./routes/clasesRoutes.js";
 import asistenciasRoutes from "./routes/asistenciasRoutes.js";
 import materiasRoutes from "./routes/materiasRoutes.js";
+import profesoresRoutes from "./routes/profesoresRoutes.js";
 
 // Inicialización
 dotenv.config();
@@ -33,6 +34,7 @@ app.use("/api/alumnos", alumnosRoutes);
 app.use("/api/clases", clasesRoutes);
 app.use("/api/asistencias", asistenciasRoutes);
 app.use("/api/materias", materiasRoutes);
+app.use("/api/profesores", profesoresRoutes);
 
 // Ruta base
 app.get("/", (req, res) => {
