@@ -48,6 +48,7 @@
   <div class="container">
     <h1>Panel del Profesor</h1>
     <p id="info"></p>
+    <p><strong>📅 Fecha actual:</strong> <span id="fechaActual"></span></p>
 
     <label for="materiaSelect">Seleccione la materia:</label>
     <select id="materiaSelect">
@@ -76,6 +77,12 @@
     const tabla = document.querySelector("#tablaAlumnos tbody");
     const mensaje = document.getElementById("mensaje");
     const materiaSelect = document.getElementById("materiaSelect");
+
+    // Mostrar la fecha actual
+const fechaActualEl = document.getElementById("fechaActual");
+const hoy = new Date();
+const opciones = { day: "2-digit", month: "2-digit", year: "numeric" };
+fechaActualEl.textContent = hoy.toLocaleDateString("es-AR", opciones);
 
     if (!usuario || usuario.rol !== "profesor") {
       alert("Acceso no autorizado. Inicia sesión como profesor.");
@@ -147,10 +154,11 @@
 
     async function registrarAsistencia(id_alumno, presente, id_materia) {
       try {
+        const fecha = new Date().toISOString().split("T")[0]; // formato YYYY-MM-DD
         const res = await fetch("http://localhost:3000/api/asistencias", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id_alumno, id_materia, presente }),
+          body: JSON.stringify({ id_alumno, id_materia, presente, fecha }),
         });
 
         const data = await res.json();

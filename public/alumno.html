@@ -51,10 +51,11 @@
     <table id="tablaAsistencias">
       <thead>
         <tr>
-          <th>ID</th>
-          <th>Materia</th>
-          <th>Estado</th>
-          <th>Acción</th>
+<th>ID</th>
+<th>Materia</th>
+<th>Fecha</th>
+<th>Estado</th>
+<th>Acción</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -126,12 +127,17 @@
 
         asistencias.forEach(asistencia => {
           const fila = document.createElement("tr");
-          fila.innerHTML = `
-            <td>${asistencia.id}</td>
-            <td>${asistencia.materia}</td>
-            <td>${asistencia.estado ? "Presente" : "Ausente"}</td>
-            <td><button class="error-btn" onclick="marcarError(${asistencia.id})">Reportar error</button></td>
-          `;
+          const fechaFormateada = asistencia.fecha
+  ? new Date(asistencia.fecha).toLocaleDateString("es-AR")
+  : "—";
+
+fila.innerHTML = `
+  <td>${asistencia.id}</td>
+  <td>${asistencia.materia}</td>
+  <td>${fechaFormateada}</td>
+  <td>${asistencia.estado ? "Presente" : "Ausente"}</td>
+  <td><button class="error-btn" onclick="marcarError(${asistencia.id})">Reportar error</button></td>
+`;
           tabla.appendChild(fila);
         });
       } catch (error) {

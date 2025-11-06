@@ -50,12 +50,13 @@ export async function getAsistenciasByAlumno(req, res) {
 
     const [rows] = await pool.query(
       `SELECT 
-          a.id_asistencia AS id,
-          a.presente AS estado,
-          m.id_materia AS materia_id,
-          m.nombre AS materia,
-          p.nombre AS profesor_nombre,
-          p.apellido AS profesor_apellido
+  a.id_asistencia AS id,
+  a.presente AS estado,
+  a.fecha,
+  m.id_materia AS materia_id,
+  m.nombre AS materia,
+  p.nombre AS profesor_nombre,
+  p.apellido AS profesor_apellido
        FROM asistencias a
        JOIN materias m ON a.id_materia = m.id_materia
        LEFT JOIN profesores p ON m.id_profesor = p.id_profesor
@@ -84,7 +85,7 @@ export async function getAsistenciasByAlumno(req, res) {
  */
 export async function createAsistencia(req, res) {
   try {
-    const { id_alumno, id_materia, presente } = req.body;
+    const { id_alumno, id_materia, presente, fecha } = req.body;
 
     if (!id_alumno || !id_materia || typeof presente === "undefined") {
       return res.status(400).json({
@@ -112,11 +113,11 @@ export async function createAsistencia(req, res) {
         .json({ error: "Alumno o materia no encontrada en la base de datos" });
     }
 
-    const [result] = await pool.query(
-      `INSERT INTO asistencias (id_alumno, id_materia, presente)
-       VALUES (?, ?, ?)`,
-      [alumnoId, materiaId, estado]
-    );
+  const [result] = await pool.query(
+  `INSERT INTO asistencias (id_alumno, id_materia, presente, fecha)
+   VALUES (?, ?, ?, ?)`,
+  [alumnoId, materiaId, estado, fecha || new Date()]
+);
 
     res.status(201).json({
       message: "Asistencia registrada correctamente ✅",
