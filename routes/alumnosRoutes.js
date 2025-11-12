@@ -1,5 +1,5 @@
 import express from "express";
-import { getAllAlumnos, asignarClaseAAlumno } from "../controllers/alumnosController.js";
+import { getAllAlumnos } from "../controllers/alumnosController.js";
 import db from "../config/db.js"; // usa el mismo nombre que en otras rutas
 
 const router = express.Router();
@@ -18,9 +18,8 @@ router.get("/por-materia/:materiaId", async (req, res, next) => {
       `
       SELECT DISTINCT a.id_alumno, a.nombre, a.apellido
       FROM alumnos a
-      JOIN alumno_clase ac ON ac.id_alumno = a.id_alumno
-      JOIN clase_materia cm ON cm.id_clase = ac.id_clase
-      WHERE cm.id_materia = ?
+      JOIN alumno_materia am ON am.id_alumno = a.id_alumno
+      WHERE am.id_materia = ?
       `,
       [materiaId]
     );
@@ -35,9 +34,6 @@ router.get("/por-materia/:materiaId", async (req, res, next) => {
     res.status(500).json({ error: "Error al consultar alumnos por materia" });
   }
 });
-
-// Asignar alumno a clase
-router.post("/clase", asignarClaseAAlumno);
 
 // Asignar alumno a materia
 router.post("/asignar", async (req, res) => {

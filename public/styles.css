@@ -1,147 +1,86 @@
-/* 🌐 Estilos generales */
+/* Reset ligero y tipografía */
+* { box-sizing: border-box; }
+html, body { height: 100%; }
 body {
-  font-family: 'Segoe UI', sans-serif;
-  background: #f7f9fc;
+  font-family: Inter, 'Segoe UI', Roboto, Arial, sans-serif;
+  background: linear-gradient(180deg,#f5f8fb 0%, #ffffff 100%);
   margin: 0;
-  padding: 0;
-  color: #333;
+  color: #222;
+  -webkit-font-smoothing:antialiased;
 }
 
-/* 🏷️ Titulos */
-h1 {
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 20px;
+/* Cabecera */
+.site-header {
+  background: #2b6cb0;
+  color: #fff;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
+.site-title { font-size: 18px; font-weight: 700; margin: 0; }
+.nav { display:flex; gap:10px; align-items:center; }
+.nav a { color: rgba(255,255,255,0.95); text-decoration:none; padding:8px 12px; border-radius:8px; }
+.nav a:hover { background: rgba(255,255,255,0.08); }
 
-/* 🧱 Contenedor principal */
+/* Contenedor principal */
 .container {
-  max-width: 500px;
-  margin: 60px auto;
-  padding: 30px;
+  max-width: 1000px;
+  margin: 28px auto;
+  padding: 22px;
+}
+
+/* Tarjetas */
+.card {
   background: #fff;
   border-radius: 12px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  padding: 18px;
+  box-shadow: 0 6px 20px rgba(30,41,59,0.06);
+  margin-bottom: 18px;
 }
 
-/* 📋 Formularios */
-form {
-  display: flex;
-  flex-direction: column;
+/* Titulos */
+h1,h2 { color: #1f2937; margin: 0 0 12px 0; }
+
+/* Formularios */
+form { display:flex; flex-direction:column; gap:10px; }
+label { font-weight:600; font-size:14px; }
+input, select, textarea, button {
+  width:100%; padding:10px 12px; border-radius:8px; border:1px solid #e6e8eb; font-size:15px;
+}
+input:focus, select:focus, textarea:focus { outline: none; box-shadow: 0 0 0 3px rgba(66,153,225,0.12); border-color:#63b3ed; }
+
+/* Botones primarios/secundarios */
+.btn { display:inline-block; padding:10px 14px; border-radius:8px; cursor:pointer; border:none; }
+.btn-primary { background:#2b6cb0; color:#fff; }
+.btn-primary:hover { background:#244f86; }
+.btn-ghost { background:transparent; color:#2b6cb0; border:1px solid #dbeafe; }
+
+.message { font-size:14px; text-align:center; margin-top:8px; }
+.message.success { color:#16a34a; }
+.message.error { color:#dc2626; }
+
+/* Tablas estilizadas */
+.table { width:100%; border-collapse:collapse; background:#fff; border-radius:8px; overflow:hidden; }
+.table th, .table td { padding:10px 12px; text-align:left; border-bottom:1px solid #f1f5f9; }
+.table thead th { background:#f8fafc; color:#0f172a; font-weight:600; }
+
+.actions { display:flex; gap:8px; }
+.chip { padding:6px 10px; border-radius:999px; font-size:13px; }
+.chip.present { background:#ecfdf5; color:#065f46; border:1px solid #bbf7d0; }
+.chip.absent { background:#fff7ed; color:#7c2d12; border:1px solid #ffd8a8; }
+
+/* Botón cerrar sesión */
+.cerrar-sesion { display:inline-block; padding:8px 12px; border-radius:8px; background:#374151; color:#fff; border:none; cursor:pointer; }
+
+/* Responsivo */
+@media (max-width: 820px) {
+  .container { padding:14px; }
+  .site-title { font-size:16px; }
+  .nav { gap:6px; }
+  .table th, .table td { font-size:14px; }
 }
 
-label {
-  font-weight: 600;
-  margin-top: 10px;
-}
-
-input, select, button {
-  width: 100%;
-  padding: 10px;
-  margin-top: 8px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  font-size: 15px;
-}
-
-/* 🎨 Botones */
-button {
-  background-color: #3498db;
-  color: white;
-  border: none;
-  cursor: pointer;
-  transition: 0.2s ease;
-}
-
-button:hover {
-  background-color: #2980b9;
-}
-
-/* 📊 Tablas */
-table {
-  width: 90%;
-  margin: 20px auto;
-  border-collapse: collapse;
-  background: white;
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-th, td {
-  padding: 10px;
-  text-align: center;
-  border-bottom: 1px solid #eee;
-}
-
-th {
-  background: #ecf0f1;
-  color: #2c3e50;
-}
-
-/* 📢 Mensajes */
-.mensaje {
-  text-align: center;
-  margin-top: 15px;
-  font-weight: 500;
-}
-
-.mensaje.ok {
-  color: #2ecc71;
-}
-
-.mensaje.error {
-  color: #e74c3c;
-}
-
-/* 🔘 Botones de asistencia */
-.presente {
-  background-color: #4caf50;
-  color: white;
-}
-
-.ausente {
-  background-color: #f44336;
-  color: white;
-}
-
-.error-btn {
-  background-color: #ff9800;
-  color: white;
-}
-
-.error-btn:hover {
-  background-color: #e68900;
-}
-
-/* 🚪 Botón cerrar sesión */
-.cerrar-sesion {
-  background-color: #555;
-  color: white;
-  padding: 10px 15px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  display: block;
-  margin: 20px auto 0 auto;
-}
-
-.cerrar-sesion:hover {
-  background-color: #333;
-}
-
-/* 📱 Responsivo */
-@media (max-width: 600px) {
-  .container {
-    width: 90%;
-    padding: 20px;
-  }
-
-  table {
-    width: 100%;
-    font-size: 14px;
-  }
-
-  input, select, button {
-    font-size: 14px;
-  }
+@media (max-width: 480px) {
+  .nav a { padding:6px 8px; font-size:13px; }
 }

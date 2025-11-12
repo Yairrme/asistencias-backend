@@ -28,6 +28,9 @@
     }
     .presente { background-color: #4caf50; color: white; }
     .ausente { background-color: #f44336; color: white; }
+    .btn-disabled { opacity: 0.6; pointer-events: none; }
+    .selected-presente { box-shadow: 0 0 0 3px rgba(76,175,80,0.18); }
+    .selected-ausente { box-shadow: 0 0 0 3px rgba(244,67,54,0.18); }
     select {
       padding: 8px;
       margin-top: 10px;
@@ -45,31 +48,44 @@
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Panel del Profesor</h1>
-    <p id="info"></p>
-    <p><strong>📅 Fecha actual:</strong> <span id="fechaActual"></span></p>
+  <header class="site-header">
+    <h2 class="site-title">Panel Profesor</h2>
+    <nav class="nav">
+      <a href="login.html">Salir</a>
+    </nav>
+  </header>
 
-    <label for="materiaSelect">Seleccione la materia:</label>
-    <select id="materiaSelect">
-      <option value="">-- Seleccionar --</option>
-    </select>
+  <main class="container">
+    <section class="card">
+      <h1>Panel del Profesor</h1>
+      <p id="info"></p>
+      <p><strong>📅 Fecha actual:</strong> <span id="fechaActual"></span></p>
 
-    <table id="tablaAlumnos">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Nombre</th>
-          <th>Apellido</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+      <label for="materiaSelect">Seleccione la materia:</label>
+      <select id="materiaSelect">
+        <option value="">-- Seleccionar --</option>
+      </select>
 
-    <p id="mensaje" class="mensaje"></p>
-    <button class="cerrar-sesion" id="logoutBtn">Cerrar sesión</button>
-  </div>
+      <div style="overflow:auto; margin-top:14px;">
+        <table id="tablaAlumnos" class="table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nombre</th>
+              <th>Apellido</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <p id="mensaje" class="message"></p>
+      <div style="text-align:center; margin-top:12px;">
+        <button class="cerrar-sesion" id="logoutBtn">Cerrar sesión</button>
+      </div>
+    </section>
+  </main>
 
   <script>
     const usuario = JSON.parse(localStorage.getItem("usuario"));
@@ -140,36 +156,76 @@ fechaActualEl.textContent = hoy.toLocaleDateString("es-AR", opciones);
             <td>${alumno.nombre}</td>
             <td>${alumno.apellido}</td>
             <td>
-              <button class="presente" onclick="registrarAsistencia(${alumno.id_alumno}, 1, ${materiaId})">Presente</button>
-              <button class="ausente" onclick="registrarAsistencia(${alumno.id_alumno}, 0, ${materiaId})">Ausente</button>
+              <button class="presente" data-alumno="${alumno.id_alumno}" data-estado="Presente" onclick="registrarAsistencia(${alumno.id_alumno}, 'Presente', ${materiaId})">Presente</button>
+              <button class="ausente" data-alumno="${alumno.id_alumno}" data-estado="Ausente" onclick="registrarAsistencia(${alumno.id_alumno}, 'Ausente', ${materiaId})">Ausente</button>
             </td>
           `;
           tabla.appendChild(fila);
         });
+
+        // Después de renderizar alumnos, obtener asistencias registradas hoy para esta materia
+        try {
+          const today = new Date().toISOString().slice(0,10);
+          const r = await fetch(`http://localhost:3000/api/asistencias/materia/${materiaId}?fecha=${today}`);
+          if (r.ok) {
+            const asistencias = await r.json();
+            asistencias.forEach(a => {
+              const alumnoId = a.id_alumno;
+              const botones = document.querySelectorAll(`button[data-alumno="${alumnoId}"]`);
+              botones.forEach(b => b.classList.add('btn-disabled'));
+              const estado = Number(a.presente) === 1 ? 'Presente' : 'Ausente';
+              const selector = `button[data-alumno="${alumnoId}"][data-estado="${estado}"]`;
+              const elegido = document.querySelector(selector);
+              if (elegido) {
+                if (estado === 'Presente') elegido.classList.add('selected-presente');
+                else elegido.classList.add('selected-ausente');
+              }
+            });
+          }
+        } catch (err) {
+          console.error('No se pudo obtener asistencias registradas:', err);
+        }
       } catch (error) {
         mensaje.textContent = "⚠️ Error al cargar alumnos.";
         console.error(error);
       }
     }
 
-    async function registrarAsistencia(id_alumno, presente, id_materia) {
+    async function registrarAsistencia(id_alumno, estado, materiaId) {
       try {
-        const fecha = new Date().toISOString().split("T")[0]; // formato YYYY-MM-DD
-        const res = await fetch("http://localhost:3000/api/asistencias", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id_alumno, id_materia, presente, fecha }),
+        if (!materiaId) {
+          alert('Seleccione una materia antes de registrar la asistencia.');
+          return;
+        }
+
+        const presente = estado === 'Presente' ? 1 : 0;
+
+        const res = await fetch('http://localhost:3000/api/asistencias', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ alumno_id: id_alumno, id_materia: Number(materiaId), presente }),
         });
 
-        const data = await res.json();
         if (res.ok) {
-          mensaje.textContent = "✅ Asistencia registrada correctamente.";
+          mensaje.textContent = '✅ Asistencia registrada correctamente.';
+
+          // Deshabilitar los botones para este alumno y marcar la elección
+          const botones = document.querySelectorAll(`button[data-alumno="${id_alumno}"]`);
+          botones.forEach(b => b.classList.add('btn-disabled'));
+
+          // Marcar el botón seleccionado visualmente
+          const selector = `button[data-alumno="${id_alumno}"][data-estado="${estado}"]`;
+          const elegido = document.querySelector(selector);
+          if (elegido) {
+            if (estado === 'Presente') elegido.classList.add('selected-presente');
+            else elegido.classList.add('selected-ausente');
+          }
         } else {
-          mensaje.textContent = "❌ Error al registrar asistencia.";
+          mensaje.textContent = '❌ Error al registrar asistencia.';
         }
       } catch (error) {
         console.error(error);
-        mensaje.textContent = "⚠️ Error al conectar con el servidor.";
+        mensaje.textContent = '⚠️ Error al conectar con el servidor.';
       }
     }
 

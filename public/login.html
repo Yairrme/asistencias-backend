@@ -5,35 +5,55 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Iniciar Sesión</title>
   <link rel="stylesheet" href="styles.css" />
-</head>
+
+  </head>
 <body>
-  <div class="container">
-    <h1>Iniciar Sesión</h1>
-    <form id="loginForm">
-      <label for="email">Correo electrónico</label>
-      <input type="email" id="email" placeholder="ejemplo@correo.com" required />
+  <header class="site-header">
+    <h2 class="site-title">Asistencias - Iniciar sesión</h2>
+    <nav class="nav">
+      <a href="login.html">Iniciar</a>
+      <a href="alumno.html">Alumno</a>
+      <a href="Profesor.html">Profesor</a> </nav>
+  </header>
 
-      <label for="password">Contraseña</label>
-      <input type="password" id="password" placeholder="********" required />
+  <main class="container">
+    <section class="card login-card">
+      <h1>Iniciar Sesión</h1>
+      <form id="loginForm" aria-label="Formulario de inicio de sesión">
+        <label for="email">Correo electrónico</label>
+        <input type="email" id="email" placeholder="ejemplo@correo.com" required />
 
-      <button type="submit">Ingresar</button>
-    </form>
+        <label for="password">Contraseña</label>
+        <input type="password" id="password" placeholder="********" required />
 
-    <p id="mensaje" class="mensaje"></p>
-  </div>
+        <button type="submit" class="btn btn-primary">Ingresar</button>
+      </form>
+
+      <p id="mensaje" class="message" role="status" aria-live="polite"></p>
+    </section>
+  </main>
 
   <script>
+    // --- MEJORAS DE JAVASCRIPT ---
+
+    // 1. Mantenibilidad: Define constantes para valores que se repiten o que pueden cambiar.
+    const API_URL = "http://localhost:3000/api/auth/login";
+
+    // 2. Eficiencia: Busca los elementos del DOM una sola vez, fuera del evento.
     const form = document.getElementById("loginForm");
+    const emailInput = document.getElementById("email");
+    const passwordInput = document.getElementById("password");
     const mensaje = document.getElementById("mensaje");
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
 
-      const email = document.getElementById("email").value;
-      const password = document.getElementById("password").value;
+      // 3. Claridad: Obtén los valores justo cuando los necesitas.
+      const email = emailInput.value;
+      const password = passwordInput.value;
 
       try {
-        const res = await fetch("http://localhost:3000/api/auth/login", {
+        const res = await fetch(API_URL, { // Usa la constante
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password }),
@@ -43,19 +63,23 @@
 
         if (res.ok) {
           mensaje.textContent = "✅ Inicio de sesión exitoso";
+          
+          // 4. Claridad: Desestructura el objeto de respuesta para un código más limpio.
+          const { usuario } = data;
 
           // Guardar usuario en localStorage
-          localStorage.setItem("usuario", JSON.stringify(data.usuario));
+          localStorage.setItem("usuario", JSON.stringify(usuario));
 
-          // Redirigir según el rol
-          if (data.usuario.rol === "profesor") {
-            window.location.href = "profesor.html";
-          } else if (data.usuario.rol === "alumno") {
+          // Redirigir según el rol (usando la variable 'usuario')
+          if (usuario.tipo === "profesor" || usuario.rol === "profesor") {
+            window.location.href = "Profesor.html";
+          } else if (usuario.tipo === "alumno" || usuario.rol === "alumno") {
             window.location.href = "alumno.html";
           } else {
             mensaje.textContent = "⚠️ Rol desconocido.";
           }
         } else {
+          // Lógica de error original (ya era robusta)
           mensaje.textContent = "❌ " + (data.error || data.message || "Credenciales incorrectas");
         }
       } catch (error) {

@@ -39,31 +39,44 @@
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Panel del Alumno</h1>
-    <p id="info"></p>
+  <header class="site-header">
+    <h2 class="site-title">Panel Alumno</h2>
+    <nav class="nav">
+      <a href="login.html">Salir</a>
+    </nav>
+  </header>
 
-    <label for="materiaSelect">Seleccione la materia:</label>
-    <select id="materiaSelect">
-      <option value="">-- Seleccione materia --</option>
-    </select>
+  <main class="container">
+    <section class="card">
+      <h1>Panel del Alumno</h1>
+      <p id="info"></p>
 
-    <table id="tablaAsistencias">
-      <thead>
-        <tr>
-<th>ID</th>
-<th>Materia</th>
-<th>Fecha</th>
-<th>Estado</th>
-<th>Acción</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+      <label for="materiaSelect">Seleccione la materia:</label>
+      <select id="materiaSelect">
+        <option value="">-- Seleccione materia --</option>
+      </select>
 
-    <p id="mensaje" class="mensaje"></p>
-    <button class="cerrar-sesion" id="logoutBtn">Cerrar sesión</button>
-  </div>
+      <div style="overflow:auto; margin-top:14px;">
+        <table id="tablaAsistencias" class="table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Materia</th>
+              <th>Fecha</th>
+              <th>Estado</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <p id="mensaje" class="message"></p>
+      <div style="text-align:center; margin-top:12px;">
+        <button class="cerrar-sesion" id="logoutBtn">Cerrar sesión</button>
+      </div>
+    </section>
+  </main>
 
   <script>
     const usuario = JSON.parse(localStorage.getItem("usuario"));
@@ -152,9 +165,9 @@ fila.innerHTML = `
         if (!confirmacion) return;
 
         const res = await fetch(`http://localhost:3000/api/asistencias/${id}`, {
-          method: "PATCH",
+          method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ presente: 1 })
+          body: JSON.stringify({ estado: 'Presente' })
         });
 
         if (res.ok) {

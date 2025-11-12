@@ -22,13 +22,12 @@ export async function getAllAlumnos(req, res) {
       return res.json(rows);
     }
 
-    // Si se filtra por materia → traer alumnos inscritos en clases que tengan esa materia
+    // Si se filtra por materia → traer alumnos inscritos en la materia (tabla alumno_materia)
     const [rows] = await pool.query(
       `SELECT DISTINCT a.id_alumno, a.nombre, a.apellido, a.dni, a.email
        FROM alumnos a
-       JOIN alumno_clase ac ON a.id_alumno = ac.id_alumno
-       JOIN clase_materia cm ON ac.id_clase = cm.id_clase
-       WHERE cm.id_materia = ?`,
+       JOIN alumno_materia am ON a.id_alumno = am.id_alumno
+       WHERE am.id_materia = ?`,
       [materia]
     );
 
@@ -49,46 +48,6 @@ export async function getAllAlumnos(req, res) {
 }
 
 /**
- * ✅ Relacionar alumno con clase (alumno_clase)
+ * ✅ Gestión de alumnos y consultas relacionadas con materias
+ * Las relaciones ahora usan la tabla `alumno_materia` para asociar alumnos y materias.
  */
-export async function asignarClaseAAlumno(req, res) {
-  try {
-    const { id_alumno, id_clase } = req.body;
-
-    if (!id_alumno || !id_clase) {
-      return res
-        .status(400)
-        .json({ error: "Faltan campos: id_alumno o id_clase" });
-    }
-
-    // Verificar si ya existe la relación
-    const [existe] = await pool.query(
-      "SELECT * FROM alumno_clase WHERE id_alumno = ? AND id_clase = ?",
-      [id_alumno, id_clase]
-    );
-
-    if (existe.length > 0) {
-      return res
-        .status(409)
-        .json({ message: "El alumno ya está asignado a esta clase" });
-    }
-
-    // Crear la relación
-    await pool.query(
-      "INSERT INTO alumno_clase (id_alumno, id_clase) VALUES (?, ?)",
-      [id_alumno, id_clase]
-    );
-
-    res.status(201).json({
-      message: "Alumno asignado a la clase correctamente ✅",
-      id_alumno,
-      id_clase,
-    });
-  } catch (err) {
-    console.error("Error asignando alumno a clase:", err);
-    res.status(500).json({
-      error: "Error al asignar alumno a la clase",
-      details: err.message,
-    });
-  }
-}

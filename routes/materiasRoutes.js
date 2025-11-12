@@ -18,7 +18,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-// Obtener materias por alumno
+// Obtener materias por alumno (usa la tabla alumno_materia)
 router.get("/por-alumno/:alumnoId", async (req, res) => {
   const { alumnoId } = req.params;
 
@@ -31,9 +31,8 @@ router.get("/por-alumno/:alumnoId", async (req, res) => {
       `
       SELECT DISTINCT m.id_materia, m.nombre
       FROM materias m
-      JOIN clase_materia cm ON cm.id_materia = m.id_materia
-      JOIN alumno_clase ac ON ac.id_clase = cm.id_clase
-      WHERE ac.id_alumno = ?
+      JOIN alumno_materia am ON am.id_materia = m.id_materia
+      WHERE am.id_alumno = ?
       `,
       [alumnoId]
     );
