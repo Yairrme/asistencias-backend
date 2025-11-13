@@ -74,6 +74,12 @@
     <div id="detalle-historial" style="margin-top:15px;"></div>
   </div>
 </section>
+
+<section id="estadisticas-section" style="margin-top: 30px;">
+  <button id="verEstadisticasBtn">📊 Ver estadísticas</button>
+  <div id="estadisticasContainer" style="display:none; margin-top:15px;"></div>
+</section>
+
       </select>
 
       <div style="overflow:auto; margin-top:14px;">
@@ -319,6 +325,76 @@ function mostrarDetalleFecha(item) {
       localStorage.removeItem("usuario");
       window.location.href = "login.html";
     });
+
+  const verEstadisticasBtn = document.getElementById("verEstadisticasBtn");
+const estadisticasContainer = document.getElementById("estadisticasContainer");
+
+verEstadisticasBtn.addEventListener("click", async () => {
+  const materiaId = materiaSelect.value;
+
+  if (!materiaId) {
+    alert("Seleccione una materia primero.");
+    return;
+  }
+
+  if (estadisticasContainer.style.display === "none" || estadisticasContainer.style.display === "") {
+    estadisticasContainer.style.display = "block";
+    verEstadisticasBtn.textContent = "❌ Ocultar estadísticas";
+    cargarEstadisticas(materiaId);
+  } else {
+    estadisticasContainer.style.display = "none";
+    verEstadisticasBtn.textContent = "📊 Ver estadísticas";
+    estadisticasContainer.innerHTML = "";
+  }
+});
+
+async function cargarEstadisticas(materiaId) {
+  estadisticasContainer.innerHTML = "⏳ Cargando estadísticas...";
+
+  try {
+    const res = await fetch(`http://localhost:3000/api/asistencias/estadisticas/${materiaId}`);
+    const data = await res.json();
+
+    if (data.total_clases === 0) {
+      estadisticasContainer.innerHTML = "<p>No hay clases registradas aún.</p>";
+      return;
+    }
+
+    let html = `
+      <h3>📊 Estadísticas generales</h3>
+      <p><strong>Total de clases dadas:</strong> ${data.total_clases}</p>
+      <table border="1" cellspacing="0" cellpadding="4" style="width:100%; margin-top:10px;">
+        <tr>
+          <th>Alumno</th>
+          <th>Presentes</th>
+          <th>Ausentes</th>
+          <th>Total</th>
+          <th>% Asistencia</th>
+        </tr>
+    `;
+
+    data.alumnos.forEach(a => {
+      html += `
+        <tr>
+          <td>${a.apellido}, ${a.nombre}</td>
+          <td>${a.presentes}</td>
+          <td>${a.ausentes}</td>
+          <td>${a.total_clases}</td>
+          <td><strong>${a.porcentaje}%</strong></td>
+        </tr>
+      `;
+    });
+
+    html += "</table>";
+
+    estadisticasContainer.innerHTML = html;
+
+  } catch (err) {
+    console.error(err);
+    estadisticasContainer.innerHTML = "<p style='color:red;'>Error al cargar estadísticas.</p>";
+  }
+}
+
   </script>
 </body>
 </html>

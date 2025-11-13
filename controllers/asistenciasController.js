@@ -109,3 +109,65 @@ export async function updateAsistencia(req, res, next) {
     next(err);
   }
 }
+
+export async function getEstadisticasPorMateria(req, res) {
+  const { materiaId } = req.params;
+
+  try {
+    // Total de clases registradas
+    const [[totalClases]] = await pool.query(
+      `SELECT COUNT(DISTINCT fecha) AS total_clases
+       FROM asistencias
+       WHERE id_materia = ?`,
+      [materiaId]
+    );
+
+    // Si no hay registros, no hay estadísticas
+    if (!totalClases || totalClases.total_clases === 0) {
+      return res.json({
+        total_clases: 0,
+        alumnos: []
+      });
+    }
+
+    // Obtener asistencia por alumno
+    const [alumnos] = await pool.query(
+      `SELECT 
+          al.id_alumno,
+          al.nombre,
+          al.apellido,
+          SUM(a.presente) AS presentes,
+          COUNT(a.id_asistencia) AS total_registros
+       FROM asistencias a
+       JOIN alumnos al ON al.id_alumno = a.id_alumno
+       WHERE a.id_materia = ?
+       GROUP BY al.id_alumno
+       ORDER BY al.apellido ASC`,
+      [materiaId]
+    );
+
+    // Calcular porcentaje
+    const resultado = alumnos.map(a => {
+      const ausentes = totalClases.total_clases - a.presentes;
+      const porcentaje = (a.presentes / totalClases.total_clases * 100).toFixed(1);
+      return {
+        id: a.id_alumno,
+        nombre: a.nombre,
+        apellido: a.apellido,
+        presentes: a.presentes,
+        ausentes: ausentes,
+        total_clases: totalClases.total_clases,
+        porcentaje: porcentaje
+      };
+    });
+
+    res.json({
+      total_clases: totalClases.total_clases,
+      alumnos: resultado
+    });
+
+  } catch (err) {
+    console.error("Error en estadísticas:", err);
+    res.status(500).json({ error: "Error al obtener estadísticas" });
+  }
+}

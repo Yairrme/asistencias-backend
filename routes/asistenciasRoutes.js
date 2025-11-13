@@ -4,6 +4,7 @@ import {
   getAsistenciasByAlumno,
   createAsistencia,
   updateAsistencia,
+  getEstadisticasPorMateria,
 } from "../controllers/asistenciasController.js";
 import db from "../config/db.js";
 
@@ -17,6 +18,7 @@ router.get("/por-alumno/:alumnoId", getAsistenciasByAlumno);
 // Añadir mapping a controlador (si se prefiere usar controller en vez de inline)
 import { getAsistenciasByMateria } from "../controllers/asistenciasController.js";
 
+router.get("/estadisticas/:materiaId", getEstadisticasPorMateria);
 
 // Registrar una nueva asistencia
 router.post("/", createAsistencia);
