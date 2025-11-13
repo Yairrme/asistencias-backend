@@ -63,7 +63,17 @@
 
       <label for="materiaSelect">Seleccione la materia:</label>
       <select id="materiaSelect">
-        <option value="">-- Seleccionar --</option>
+         <option value="">-- Seleccione materia --</option>
+</select>
+
+<section id="historial-section" style="margin-top: 20px;">
+  <button id="toggleHistorialBtn">📜 Ver historial</button>
+
+  <div id="historial-container" style="display:none; margin-top:10px;">
+    <div id="fechas-container"></div>
+    <div id="detalle-historial" style="margin-top:15px;"></div>
+  </div>
+</section>
       </select>
 
       <div style="overflow:auto; margin-top:14px;">
@@ -228,6 +238,82 @@ fechaActualEl.textContent = hoy.toLocaleDateString("es-AR", opciones);
         mensaje.textContent = '⚠️ Error al conectar con el servidor.';
       }
     }
+
+// 📜 --- HISTORIAL DE ASISTENCIAS ---
+
+const toggleHistorialBtn = document.getElementById("toggleHistorialBtn");
+const historialContainer = document.getElementById("historial-container");
+const fechasContainer = document.getElementById("fechas-container");
+const detalleHistorial = document.getElementById("detalle-historial");
+
+// Mostrar/ocultar historial
+toggleHistorialBtn.addEventListener("click", async () => {
+  const materiaId = materiaSelect.value;
+  if (!materiaId) {
+    alert("Seleccione una materia primero.");
+    return;
+  }
+
+  if (historialContainer.style.display === "none" || historialContainer.style.display === "") {
+    historialContainer.style.display = "block";
+    toggleHistorialBtn.textContent = "❌ Ocultar historial";
+    await cargarFechasHistorial(materiaId);
+  } else {
+    historialContainer.style.display = "none";
+    toggleHistorialBtn.textContent = "📜 Ver historial";
+    fechasContainer.innerHTML = "";
+    detalleHistorial.innerHTML = "";
+  }
+});
+
+// Cargar fechas del historial de una materia
+async function cargarFechasHistorial(materiaId) {
+  fechasContainer.innerHTML = "⏳ Cargando fechas...";
+  detalleHistorial.innerHTML = "";
+
+  try {
+    const res = await fetch(`http://localhost:3000/api/asistencias/por-materia/${materiaId}`);
+    if (!res.ok) throw new Error("Error al obtener historial");
+    const data = await res.json();
+
+    if (data.length === 0) {
+      fechasContainer.innerHTML = "<p>No hay asistencias registradas.</p>";
+      return;
+    }
+
+    // Mostrar solo las fechas como botones
+    fechasContainer.innerHTML = "<h3>📅 Fechas disponibles:</h3>";
+    data.forEach(item => {
+      const btn = document.createElement("button");
+      btn.textContent = item.fecha;
+      btn.style.margin = "5px";
+      btn.addEventListener("click", () => mostrarDetalleFecha(item));
+      fechasContainer.appendChild(btn);
+    });
+  } catch (err) {
+    console.error(err);
+    fechasContainer.innerHTML = "<p style='color:red;'>⚠️ Error al cargar fechas</p>";
+  }
+}
+
+// Mostrar detalle por fecha
+function mostrarDetalleFecha(item) {
+  detalleHistorial.innerHTML = `
+    <h3>🗓️ Asistencias del ${item.fecha}</h3>
+    <table border="1" cellspacing="0" cellpadding="5" style="width:100%; margin-top:10px;">
+      <tr><th>Alumno</th><th>Estado</th></tr>
+      ${item.alumnos.map(a => `
+        <tr>
+          <td>${a.apellido}, ${a.nombre}</td>
+          <td style="color:${a.presente ? 'green' : 'red'};">
+            ${a.presente ? 'Presente' : 'Ausente'}
+          </td>
+        </tr>
+      `).join('')}
+    </table>
+  `;
+}
+
 
     document.getElementById("logoutBtn").addEventListener("click", () => {
       localStorage.removeItem("usuario");

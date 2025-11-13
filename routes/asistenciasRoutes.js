@@ -16,31 +16,7 @@ router.get("/", getAllAsistencias);
 router.get("/por-alumno/:alumnoId", getAsistenciasByAlumno);
 // Añadir mapping a controlador (si se prefiere usar controller en vez de inline)
 import { getAsistenciasByMateria } from "../controllers/asistenciasController.js";
-router.get('/materia/:materiaId', getAsistenciasByMateria);
 
-// Obtener asistencias por materia (opcional ?fecha=YYYY-MM-DD)
-router.get("/por-materia/:materiaId", async (req, res) => {
-  const { materiaId } = req.params;
-  const { fecha } = req.query; // formato YYYY-MM-DD opcional
-
-  if (!materiaId || isNaN(materiaId)) {
-    return res.status(400).json({ error: 'materiaId inválido' });
-  }
-
-  try {
-    const qFecha = fecha || new Date().toISOString().slice(0,10);
-    const query = `
-      SELECT id_asistencia AS id, id_alumno, presente, DATE(fecha) AS fecha
-      FROM asistencias
-      WHERE id_materia = ? AND DATE(fecha) = ?
-    `;
-    const [rows] = await db.query(query, [Number(materiaId), qFecha]);
-    res.json(rows);
-  } catch (err) {
-    console.error('Error al obtener asistencias por materia:', err);
-    res.status(500).json({ error: 'Error al obtener asistencias por materia' });
-  }
-});
 
 // Registrar una nueva asistencia
 router.post("/", createAsistencia);
@@ -77,5 +53,53 @@ router.patch("/:id", async (req, res) => {
 
 // Aceptar PUT que también actualiza el campo 'presente'
 router.put('/:id', updateAsistencia);
+
+// ✅ Obtener asistencias por materia (agrupadas por fecha)
+router.get("/por-materia/:materiaId", async (req, res) => {
+  const { materiaId } = req.params;
+
+  try {
+    const [rows] = await db.query(
+      `SELECT 
+        a.id_asistencia,
+        a.fecha,
+        a.presente,
+        al.nombre AS alumno_nombre,
+        al.apellido AS alumno_apellido
+      FROM asistencias a
+      JOIN alumnos al ON a.id_alumno = al.id_alumno
+      WHERE a.id_materia = ?
+      ORDER BY a.fecha DESC, al.apellido ASC`,
+      [materiaId]
+    );
+
+    if (rows.length === 0) {
+      return res.json([]);
+    }
+
+    // Agrupar asistencias por fecha
+    const agrupado = rows.reduce((acc, row) => {
+      const fecha = row.fecha ? row.fecha.toISOString().split("T")[0] : "Sin fecha";
+      if (!acc[fecha]) acc[fecha] = [];
+      acc[fecha].push({
+        nombre: row.alumno_nombre,
+        apellido: row.alumno_apellido,
+        presente: row.presente,
+      });
+      return acc;
+    }, {});
+
+    // Convertir a array
+    const resultado = Object.entries(agrupado).map(([fecha, alumnos]) => ({
+      fecha,
+      alumnos,
+    }));
+
+    res.json(resultado);
+  } catch (error) {
+    console.error("Error al obtener historial por materia:", error);
+    res.status(500).json({ error: "Error al obtener historial de asistencias" });
+  }
+});
 
 export default router;
