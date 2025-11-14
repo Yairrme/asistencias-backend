@@ -56,6 +56,26 @@
         <option value="">-- Seleccione materia --</option>
       </select>
 
+      <button id="verStatsBtn" class="cerrar-sesion">Ver estadísticas</button>
+<button id="ocultarStatsBtn" class="cerrar-sesion" style="display:none;background:#777;">Ocultar estadísticas</button>
+
+<div id="estadisticasBox" style="
+    display:none;
+    margin-top:20px;
+    padding:15px;
+    border:1px solid #ccc;
+    border-radius:8px;
+    background:#f8f8f8;
+">
+  <h3>📊 Estadísticas de Asistencia</h3>
+  <p><strong>Materia:</strong> <span id="statsMateria"></span></p>
+  <p><strong>Total de clases:</strong> <span id="statsTotal"></span></p>
+  <p><strong>Presentes:</strong> <span id="statsPresentes"></span></p>
+  <p><strong>Ausentes:</strong> <span id="statsAusentes"></span></p>
+  <p><strong>Porcentaje de asistencia:</strong> <span id="statsPorcentaje"></span></p>
+</div>
+
+
       <div style="overflow:auto; margin-top:14px;">
         <table id="tablaAsistencias" class="table">
           <thead>
@@ -242,6 +262,66 @@ async function cargarAsistencias(materiaId) {
       localStorage.removeItem("usuario");
       window.location.href = "login.html";
     });
+
+  document.getElementById("verStatsBtn").addEventListener("click", cargarEstadisticasAlumno);
+document.getElementById("ocultarStatsBtn").addEventListener("click", () => {
+  document.getElementById("estadisticasBox").style.display = "none";
+  document.getElementById("ocultarStatsBtn").style.display = "none";
+  document.getElementById("verStatsBtn").style.display = "inline-block";
+});
+
+async function cargarEstadisticasAlumno() {
+  const materiaId = materiaSelect.value;
+
+  if (!materiaId) {
+    alert("Selecciona una materia primero.");
+    return;
+  }
+
+  try {
+    const res = await fetch(`http://localhost:3000/api/asistencias/por-alumno/${usuario.id_alumno || usuario.id}`);
+    const asistencias = await res.json();
+
+    if (!Array.isArray(asistencias)) {
+      alert("Error al obtener estadísticas.");
+      return;
+    }
+
+    // Filtrar por materia (apto para cualquier backend)
+    const asistFiltradas = asistencias.filter(a => 
+      Number(a.id_materia || a.materia_id) === Number(materiaId)
+    );
+
+    if (asistFiltradas.length === 0) {
+      alert("No hay asistencias registradas para esta materia.");
+      return;
+    }
+
+    // Calcular datos
+    const totalClases = asistFiltradas.length;
+    const presentes = asistFiltradas.filter(a => a.presente == 1 || a.estado == 1).length;
+    const ausentes = totalClases - presentes;
+    const porcentaje = ((presentes / totalClases) * 100).toFixed(1);
+
+    // Mostrar
+    document.getElementById("statsMateria").textContent =
+      materiaSelect.options[materiaSelect.selectedIndex].text;
+
+    document.getElementById("statsTotal").textContent = totalClases;
+    document.getElementById("statsPresentes").textContent = presentes;
+    document.getElementById("statsAusentes").textContent = ausentes;
+    document.getElementById("statsPorcentaje").textContent = porcentaje + "%";
+
+    // Mostrar cuadro
+    document.getElementById("estadisticasBox").style.display = "block";
+    document.getElementById("ocultarStatsBtn").style.display = "inline-block";
+    document.getElementById("verStatsBtn").style.display = "none";
+  } catch (error) {
+    console.error("Error al cargar estadísticas:", error);
+    alert("Hubo un error cargando estadísticas.");
+  }
+}
+
   </script>
 </body>
 </html>
