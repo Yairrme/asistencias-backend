@@ -64,23 +64,39 @@
       <label for="materiaSelect">Seleccione la materia:</label>
       <select id="materiaSelect">
          <option value="">-- Seleccione materia --</option>
-</select>
-
-<section id="historial-section" style="margin-top: 20px;">
-  <button id="toggleHistorialBtn">📜 Ver historial</button>
-
-  <div id="historial-container" style="display:none; margin-top:10px;">
-    <div id="fechas-container"></div>
-    <div id="detalle-historial" style="margin-top:15px;"></div>
-  </div>
-</section>
-
-<section id="estadisticas-section" style="margin-top: 30px;">
-  <button id="verEstadisticasBtn">📊 Ver estadísticas</button>
-  <div id="estadisticasContainer" style="display:none; margin-top:15px;"></div>
-</section>
-
       </select>
+
+      <section id="historial-section" style="margin-top: 20px;">
+        <button id="toggleHistorialBtn">📜 Ver historial</button>
+
+        <div id="historial-container" style="display:none; margin-top:10px;">
+          <div id="fechas-container"></div>
+          <div id="detalle-historial" style="margin-top:15px;"></div>
+        </div>
+      </section>
+
+      <button id="btn-toggle-estadisticas" style="margin-top:16px;">📊 Ver estadísticas</button>
+
+      <div id="contenedor-estadisticas" style="display:none; margin-top:15px;">
+        <div id="info-estadisticas"></div>
+
+        <table id="tabla-estadisticas" border="1" cellspacing="0" cellpadding="4" style="width:100%; text-align:center;">
+          <thead>
+            <tr>
+              <th>Alumno</th>
+              <th>Presentes</th>
+              <th>Ausentes</th>
+              <th>Total</th>
+              <th>% Asistencia</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      <div style="margin-top: 15px;">
+        <button id="btnExcel">📊 Exportar a Excel</button>
+        <button id="btnPDF">📄 Exportar a PDF</button>
+      </div>
+      </div>
 
       <div style="overflow:auto; margin-top:14px;">
         <table id="tablaAlumnos" class="table">
@@ -103,6 +119,10 @@
     </section>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+
   <script>
     const usuario = JSON.parse(localStorage.getItem("usuario"));
     const info = document.getElementById("info");
@@ -111,10 +131,10 @@
     const materiaSelect = document.getElementById("materiaSelect");
 
     // Mostrar la fecha actual
-const fechaActualEl = document.getElementById("fechaActual");
-const hoy = new Date();
-const opciones = { day: "2-digit", month: "2-digit", year: "numeric" };
-fechaActualEl.textContent = hoy.toLocaleDateString("es-AR", opciones);
+    const fechaActualEl = document.getElementById("fechaActual");
+    const hoy = new Date();
+    const opciones = { day: "2-digit", month: "2-digit", year: "numeric" };
+    fechaActualEl.textContent = hoy.toLocaleDateString("es-AR", opciones);
 
     if (!usuario || usuario.rol !== "profesor") {
       alert("Acceso no autorizado. Inicia sesión como profesor.");
@@ -154,6 +174,8 @@ fechaActualEl.textContent = hoy.toLocaleDateString("es-AR", opciones);
       const materiaId = materiaSelect.value;
       if (materiaId) {
         cargarAlumnos(materiaId);
+        // opcional: actualizar estadísticas automáticamente al cambiar materia
+        // cargarEstadisticas(materiaId);
       } else {
         tabla.innerHTML = "";
       }
@@ -182,21 +204,44 @@ fechaActualEl.textContent = hoy.toLocaleDateString("es-AR", opciones);
         // Después de renderizar alumnos, obtener asistencias registradas hoy para esta materia
         try {
           const today = new Date().toISOString().slice(0,10);
-          const r = await fetch(`http://localhost:3000/api/asistencias/materia/${materiaId}?fecha=${today}`);
+          // usamos la ruta por-materia y filtramos por fecha localmente
+          const r = await fetch(`http://localhost:3000/api/asistencias/por-materia/${materiaId}`);
           if (r.ok) {
-            const asistencias = await r.json();
-            asistencias.forEach(a => {
-              const alumnoId = a.id_alumno;
-              const botones = document.querySelectorAll(`button[data-alumno="${alumnoId}"]`);
-              botones.forEach(b => b.classList.add('btn-disabled'));
-              const estado = Number(a.presente) === 1 ? 'Presente' : 'Ausente';
-              const selector = `button[data-alumno="${alumnoId}"][data-estado="${estado}"]`;
-              const elegido = document.querySelector(selector);
-              if (elegido) {
-                if (estado === 'Presente') elegido.classList.add('selected-presente');
-                else elegido.classList.add('selected-ausente');
-              }
+            const historial = await r.json();
+            // historial es array agrupado por fecha: [{fecha, alumnos: [...]}, ...]
+            const hoyEntry = historial.find(d => {
+              // d.fecha puede venir en formato 'YYYY-MM-DD' o Date-string
+              return String(d.fecha).startsWith(today);
             });
+            if (hoyEntry && Array.isArray(hoyEntry.alumnos)) {
+              hoyEntry.alumnos.forEach(a => {
+                // aquí a no tiene id, solo nombre/apellido/presente en tu agrupado original
+                // para poder deshabilitar por id necesitamos comparar por nombre+apellido o modificar backend para devolver id
+                // intentamos deshabilitar por coincidencia de apellido+nombre en la tabla
+                const alumnoNombre = `${a.nombre}`.trim();
+                const alumnoApellido = `${a.apellido}`.trim();
+                // buscar fila en DOM
+                const botones = Array.from(document.querySelectorAll('button[data-alumno]'));
+                botones.forEach(btn => {
+                  const filaTr = btn.closest('tr');
+                  const tdNombre = filaTr.querySelector('td:nth-child(2)').textContent.trim();
+                  const tdApellido = filaTr.querySelector('td:nth-child(3)').textContent.trim();
+                  if (tdNombre === alumnoNombre && tdApellido === alumnoApellido) {
+                    // deshabilitar todos los botones de este alumno
+                    const allBtns = filaTr.querySelectorAll('button');
+                    allBtns.forEach(b => b.classList.add('btn-disabled'));
+                    const estado = Number(a.presente) === 1 ? 'Presente' : 'Ausente';
+                    const selector = `button[data-alumno="${filaTr.querySelector('td').textContent.trim()}"][data-estado="${estado}"]`;
+                    // intentar marcar visualmente por data-estado (si coincide)
+                    const elegido = Array.from(filaTr.querySelectorAll('button')).find(b => b.dataset.estado === estado);
+                    if (elegido) {
+                      if (estado === 'Presente') elegido.classList.add('selected-presente');
+                      else elegido.classList.add('selected-ausente');
+                    }
+                  }
+                });
+              });
+            }
           }
         } catch (err) {
           console.error('No se pudo obtener asistencias registradas:', err);
@@ -216,10 +261,11 @@ fechaActualEl.textContent = hoy.toLocaleDateString("es-AR", opciones);
 
         const presente = estado === 'Presente' ? 1 : 0;
 
+        // <-- clave corregida: enviar id_alumno (no alumno_id)
         const res = await fetch('http://localhost:3000/api/asistencias', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ alumno_id: id_alumno, id_materia: Number(materiaId), presente }),
+          body: JSON.stringify({ id_alumno: id_alumno, id_materia: Number(materiaId), presente }),
         });
 
         if (res.ok) {
@@ -237,7 +283,8 @@ fechaActualEl.textContent = hoy.toLocaleDateString("es-AR", opciones);
             else elegido.classList.add('selected-ausente');
           }
         } else {
-          mensaje.textContent = '❌ Error al registrar asistencia.';
+          const data = await res.json().catch(()=>null);
+          mensaje.textContent = '❌ Error al registrar asistencia.' + (data && data.error ? ' ' + data.error : '');
         }
       } catch (error) {
         console.error(error);
@@ -245,155 +292,176 @@ fechaActualEl.textContent = hoy.toLocaleDateString("es-AR", opciones);
       }
     }
 
-// 📜 --- HISTORIAL DE ASISTENCIAS ---
+    // 📜 --- HISTORIAL DE ASISTENCIAS ---
+    const toggleHistorialBtn = document.getElementById("toggleHistorialBtn");
+    const historialContainer = document.getElementById("historial-container");
+    const fechasContainer = document.getElementById("fechas-container");
+    const detalleHistorial = document.getElementById("detalle-historial");
 
-const toggleHistorialBtn = document.getElementById("toggleHistorialBtn");
-const historialContainer = document.getElementById("historial-container");
-const fechasContainer = document.getElementById("fechas-container");
-const detalleHistorial = document.getElementById("detalle-historial");
+    // Mostrar/ocultar historial
+    toggleHistorialBtn.addEventListener("click", async () => {
+      const materiaId = materiaSelect.value;
+      if (!materiaId) {
+        alert("Seleccione una materia primero.");
+        return;
+      }
 
-// Mostrar/ocultar historial
-toggleHistorialBtn.addEventListener("click", async () => {
-  const materiaId = materiaSelect.value;
-  if (!materiaId) {
-    alert("Seleccione una materia primero.");
-    return;
-  }
+      if (historialContainer.style.display === "none" || historialContainer.style.display === "") {
+        historialContainer.style.display = "block";
+        toggleHistorialBtn.textContent = "❌ Ocultar historial";
+        await cargarFechasHistorial(materiaId);
+      } else {
+        historialContainer.style.display = "none";
+        toggleHistorialBtn.textContent = "📜 Ver historial";
+        fechasContainer.innerHTML = "";
+        detalleHistorial.innerHTML = "";
+      }
+    });
 
-  if (historialContainer.style.display === "none" || historialContainer.style.display === "") {
-    historialContainer.style.display = "block";
-    toggleHistorialBtn.textContent = "❌ Ocultar historial";
-    await cargarFechasHistorial(materiaId);
-  } else {
-    historialContainer.style.display = "none";
-    toggleHistorialBtn.textContent = "📜 Ver historial";
-    fechasContainer.innerHTML = "";
-    detalleHistorial.innerHTML = "";
-  }
-});
+    // Cargar fechas del historial de una materia
+    async function cargarFechasHistorial(materiaId) {
+      fechasContainer.innerHTML = "⏳ Cargando fechas...";
+      detalleHistorial.innerHTML = "";
 
-// Cargar fechas del historial de una materia
-async function cargarFechasHistorial(materiaId) {
-  fechasContainer.innerHTML = "⏳ Cargando fechas...";
-  detalleHistorial.innerHTML = "";
+      try {
+        const res = await fetch(`http://localhost:3000/api/asistencias/por-materia/${materiaId}`);
+        if (!res.ok) throw new Error("Error al obtener historial");
+        const data = await res.json();
 
-  try {
-    const res = await fetch(`http://localhost:3000/api/asistencias/por-materia/${materiaId}`);
-    if (!res.ok) throw new Error("Error al obtener historial");
-    const data = await res.json();
+        if (data.length === 0) {
+          fechasContainer.innerHTML = "<p>No hay asistencias registradas.</p>";
+          return;
+        }
 
-    if (data.length === 0) {
-      fechasContainer.innerHTML = "<p>No hay asistencias registradas.</p>";
-      return;
+        // Mostrar solo las fechas como botones
+        fechasContainer.innerHTML = "<h3>📅 Fechas disponibles:</h3>";
+        data.forEach(item => {
+          const btn = document.createElement("button");
+          btn.textContent = item.fecha;
+          btn.style.margin = "5px";
+          btn.addEventListener("click", () => mostrarDetalleFecha(item));
+          fechasContainer.appendChild(btn);
+        });
+      } catch (err) {
+        console.error(err);
+        fechasContainer.innerHTML = "<p style='color:red;'>⚠️ Error al cargar fechas</p>";
+      }
     }
 
-    // Mostrar solo las fechas como botones
-    fechasContainer.innerHTML = "<h3>📅 Fechas disponibles:</h3>";
-    data.forEach(item => {
-      const btn = document.createElement("button");
-      btn.textContent = item.fecha;
-      btn.style.margin = "5px";
-      btn.addEventListener("click", () => mostrarDetalleFecha(item));
-      fechasContainer.appendChild(btn);
-    });
-  } catch (err) {
-    console.error(err);
-    fechasContainer.innerHTML = "<p style='color:red;'>⚠️ Error al cargar fechas</p>";
-  }
-}
-
-// Mostrar detalle por fecha
-function mostrarDetalleFecha(item) {
-  detalleHistorial.innerHTML = `
-    <h3>🗓️ Asistencias del ${item.fecha}</h3>
-    <table border="1" cellspacing="0" cellpadding="5" style="width:100%; margin-top:10px;">
-      <tr><th>Alumno</th><th>Estado</th></tr>
-      ${item.alumnos.map(a => `
-        <tr>
-          <td>${a.apellido}, ${a.nombre}</td>
-          <td style="color:${a.presente ? 'green' : 'red'};">
-            ${a.presente ? 'Presente' : 'Ausente'}
-          </td>
-        </tr>
-      `).join('')}
-    </table>
-  `;
-}
-
+    // Mostrar detalle por fecha
+    function mostrarDetalleFecha(item) {
+      detalleHistorial.innerHTML = `
+        <h3>🗓️ Asistencias del ${item.fecha}</h3>
+        <table border="1" cellspacing="0" cellpadding="5" style="width:100%; margin-top:10px;">
+          <tr><th>Alumno</th><th>Estado</th></tr>
+          ${item.alumnos.map(a => `
+            <tr>
+              <td>${a.apellido}, ${a.nombre}</td>
+              <td style="color:${a.presente ? 'green' : 'red'};">
+                ${a.presente ? 'Presente' : 'Ausente'}
+              </td>
+            </tr>
+          `).join('')}
+        </table>
+      `;
+    }
 
     document.getElementById("logoutBtn").addEventListener("click", () => {
       localStorage.removeItem("usuario");
       window.location.href = "login.html";
     });
 
-  const verEstadisticasBtn = document.getElementById("verEstadisticasBtn");
-const estadisticasContainer = document.getElementById("estadisticasContainer");
+    // ---------- Estadísticas (mostrar/ocultar + cargar) ----------
+    const btnToggle = document.getElementById("btn-toggle-estadisticas");
+    const contenedorEst = document.getElementById("contenedor-estadisticas");
 
-verEstadisticasBtn.addEventListener("click", async () => {
-  const materiaId = materiaSelect.value;
+    btnToggle.addEventListener("click", () => {
+      const materiaId = materiaSelect.value;
 
-  if (!materiaId) {
-    alert("Seleccione una materia primero.");
-    return;
-  }
+      if (!materiaId) {
+        alert("Seleccione una materia primero.");
+        return;
+      }
 
-  if (estadisticasContainer.style.display === "none" || estadisticasContainer.style.display === "") {
-    estadisticasContainer.style.display = "block";
-    verEstadisticasBtn.textContent = "❌ Ocultar estadísticas";
-    cargarEstadisticas(materiaId);
-  } else {
-    estadisticasContainer.style.display = "none";
-    verEstadisticasBtn.textContent = "📊 Ver estadísticas";
-    estadisticasContainer.innerHTML = "";
-  }
-});
-
-async function cargarEstadisticas(materiaId) {
-  estadisticasContainer.innerHTML = "⏳ Cargando estadísticas...";
-
-  try {
-    const res = await fetch(`http://localhost:3000/api/asistencias/estadisticas/${materiaId}`);
-    const data = await res.json();
-
-    if (data.total_clases === 0) {
-      estadisticasContainer.innerHTML = "<p>No hay clases registradas aún.</p>";
-      return;
-    }
-
-    let html = `
-      <h3>📊 Estadísticas generales</h3>
-      <p><strong>Total de clases dadas:</strong> ${data.total_clases}</p>
-      <table border="1" cellspacing="0" cellpadding="4" style="width:100%; margin-top:10px;">
-        <tr>
-          <th>Alumno</th>
-          <th>Presentes</th>
-          <th>Ausentes</th>
-          <th>Total</th>
-          <th>% Asistencia</th>
-        </tr>
-    `;
-
-    data.alumnos.forEach(a => {
-      html += `
-        <tr>
-          <td>${a.apellido}, ${a.nombre}</td>
-          <td>${a.presentes}</td>
-          <td>${a.ausentes}</td>
-          <td>${a.total_clases}</td>
-          <td><strong>${a.porcentaje}%</strong></td>
-        </tr>
-      `;
+      if (contenedorEst.style.display === "none" || contenedorEst.style.display === "") {
+        contenedorEst.style.display = "block";
+        btnToggle.textContent = "🔽 Ocultar estadísticas";
+        cargarEstadisticas(materiaId);
+      } else {
+        contenedorEst.style.display = "none";
+        btnToggle.textContent = "📊 Ver estadísticas";
+      }
     });
 
-    html += "</table>";
+    async function cargarEstadisticas(materiaId) {
+      const info = document.getElementById("info-estadisticas");
+      const tabla = document.querySelector("#tabla-estadisticas tbody");
 
-    estadisticasContainer.innerHTML = html;
+      info.innerHTML = "Cargando...";
+      tabla.innerHTML = "";
 
-  } catch (err) {
-    console.error(err);
-    estadisticasContainer.innerHTML = "<p style='color:red;'>Error al cargar estadísticas.</p>";
-  }
-}
+      try {
+        const res = await fetch(`http://localhost:3000/api/asistencias/estadisticas/${materiaId}`);
+        if (!res.ok) throw new Error("No se pudieron obtener estadísticas");
+        const data = await res.json();
+
+        if (!data || typeof data.total_clases === 'undefined') {
+          info.innerHTML = "<p>No hay estadísticas disponibles.</p>";
+          return;
+        }
+
+        info.innerHTML = `
+            <h3>📊 Estadísticas generales</h3>
+            <p><strong>Total de clases:</strong> ${data.total_clases}</p>
+        `;
+
+        tabla.innerHTML = "";
+        data.alumnos.forEach(a => {
+          tabla.innerHTML += `
+              <tr>
+                  <td>${a.apellido}, ${a.nombre}</td>
+                  <td>${a.presentes}</td>
+                  <td>${a.ausentes}</td>
+                  <td>${a.total_clases}</td>
+                  <td>${a.porcentaje}%</td>
+              </tr>
+          `;
+        });
+      } catch (err) {
+        console.error(err);
+        info.innerHTML = "<p style='color:red;'>Error al cargar estadísticas.</p>";
+      }
+    }
+
+    // Excel
+    document.getElementById("btnExcel").addEventListener("click", () => {
+      const tabla = document.querySelector("#tabla-estadisticas");
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.table_to_sheet(tabla);
+      const fecha = new Date().toLocaleString("es-AR");
+      // Agregar fecha a la hoja Excel (al final)
+      XLSX.utils.sheet_add_aoa(ws, [["Generado:", fecha]], { origin: -1 });
+      XLSX.utils.book_append_sheet(wb, ws, "Estadisticas");
+      XLSX.writeFile(wb, "estadisticas_asistencia.xlsx");
+    });
+
+    // PDF
+    document.getElementById("btnPDF").addEventListener("click", () => {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      const fecha = new Date().toLocaleString("es-AR");
+      doc.setFontSize(18);
+      doc.text("Estadísticas de Asistencia", 14, 18);
+      doc.setFontSize(11);
+      doc.text(`Generado: ${fecha}`, 14, 26);
+      doc.autoTable({
+        html: "#tabla-estadisticas",
+        startY: 35,
+        theme: "grid",
+        styles: { halign: "center", valign: "middle" }
+      });
+      doc.save("estadisticas_asistencia.pdf");
+    });
 
   </script>
 </body>

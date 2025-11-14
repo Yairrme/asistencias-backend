@@ -15,9 +15,8 @@ router.get("/", getAllAsistencias);
 
 // Obtener asistencias por alumno
 router.get("/por-alumno/:alumnoId", getAsistenciasByAlumno);
-// Añadir mapping a controlador (si se prefiere usar controller en vez de inline)
-import { getAsistenciasByMateria } from "../controllers/asistenciasController.js";
 
+// Estadísticas por materia (controller)
 router.get("/estadisticas/:materiaId", getEstadisticasPorMateria);
 
 // Registrar una nueva asistencia
@@ -66,6 +65,7 @@ router.get("/por-materia/:materiaId", async (req, res) => {
         a.id_asistencia,
         a.fecha,
         a.presente,
+        al.id_alumno,
         al.nombre AS alumno_nombre,
         al.apellido AS alumno_apellido
       FROM asistencias a
@@ -81,9 +81,20 @@ router.get("/por-materia/:materiaId", async (req, res) => {
 
     // Agrupar asistencias por fecha
     const agrupado = rows.reduce((acc, row) => {
-      const fecha = row.fecha ? row.fecha.toISOString().split("T")[0] : "Sin fecha";
-      if (!acc[fecha]) acc[fecha] = [];
-      acc[fecha].push({
+      // row.fecha puede venir como Date o como string; manejamos ambos casos
+      let fechaVal;
+      if (row.fecha instanceof Date) {
+        fechaVal = row.fecha.toISOString().split("T")[0];
+      } else if (row.fecha) {
+        // si viene "YYYY-MM-DD" o similar, dejamos la parte de fecha
+        fechaVal = String(row.fecha).split("T")[0];
+      } else {
+        fechaVal = "Sin fecha";
+      }
+
+      if (!acc[fechaVal]) acc[fechaVal] = [];
+      acc[fechaVal].push({
+        id_alumno: row.id_alumno,
         nombre: row.alumno_nombre,
         apellido: row.alumno_apellido,
         presente: row.presente,
