@@ -127,38 +127,93 @@
       cargarAsistencias(materiaId);
     });
 
-    async function cargarAsistencias(materiaId) {
-      try {
-        const res = await fetch(`http://localhost:3000/api/asistencias/por-alumno/${usuario.id_alumno || usuario.id}`);
-        const asistencias = await res.json();
-        tabla.innerHTML = "";
+async function cargarAsistencias(materiaId) {
+  try {
+    // pedir todas las asistencias del alumno
+    const res = await fetch(`http://localhost:3000/api/asistencias/por-alumno/${usuario.id_alumno || usuario.id}`);
+    if (!res.ok) throw new Error(`Error ${res.status}`);
+    const asistencias = await res.json();
 
-        if (!asistencias || asistencias.length === 0) {
-          tabla.innerHTML = `<tr><td colspan="4">No hay asistencias registradas aún.</td></tr>`;
-          return;
+    tabla.innerHTML = "";
+
+    if (!asistencias || asistencias.length === 0) {
+      tabla.innerHTML = `<tr><td colspan="5">No hay asistencias registradas aún.</td></tr>`;
+      return;
+    }
+
+    // Normalizamos el id de materia seleccionado (string -> number)
+    const materiaIdNum = Number(materiaId);
+
+    // Detectar qué campo trae el backend para el id de materia:
+    // posibles nombres: 'materia_id', 'id_materia', 'materiaId', 'materia'
+    // y también el nombre para mostrar la materia: 'materia' o 'nombre'
+    const posibleCamposId = ['materia_id', 'id_materia', 'materiaId', 'materia_id', 'materiaID'];
+    const posibleCamposNombre = ['materia', 'nombre'];
+
+    // Encuentra el campo id que exista en el primer registro (si existe)
+    let campoId = null;
+    if (asistencias.length > 0) {
+      const ejemplo = asistencias[0];
+      for (const c of posibleCamposId) {
+        if (Object.prototype.hasOwnProperty.call(ejemplo, c)) {
+          campoId = c;
+          break;
         }
-
-        asistencias.forEach(asistencia => {
-          const fila = document.createElement("tr");
-          const fechaFormateada = asistencia.fecha
-  ? new Date(asistencia.fecha).toLocaleDateString("es-AR")
-  : "—";
-
-fila.innerHTML = `
-  <td>${asistencia.id}</td>
-  <td>${asistencia.materia}</td>
-  <td>${fechaFormateada}</td>
-  <td>${asistencia.estado ? "Presente" : "Ausente"}</td>
-  <td><button class="error-btn" onclick="marcarError(${asistencia.id})">Reportar error</button></td>
-`;
-          tabla.appendChild(fila);
-        });
-      } catch (error) {
-        console.error("Error al cargar asistencias:", error);
-        mensaje.textContent = "⚠️ Error al obtener tus asistencias.";
       }
     }
 
+    // Si no encontró campoId, vamos a intentar buscar por 'materia' (nombre) comparando strings.
+    const filtradas = asistencias.filter(a => {
+      if (campoId) {
+        // compara numéricamente si posible
+        return Number(a[campoId]) === materiaIdNum;
+      }
+      // fallback: si no hay campo id, intentar comparar el nombre de la materia si hay campo 'materia' o 'nombre'
+      for (const n of posibleCamposNombre) {
+        if (a[n]) {
+          // compara insensitivo (mayúsc/minúsc) con el texto del option
+          const optTexto = (materiaSelect.options[materiaSelect.selectedIndex]?.text || "").trim().toLowerCase();
+          if (String(a[n]).trim().toLowerCase() === optTexto) return true;
+        }
+      }
+      return false;
+    });
+
+    if (filtradas.length === 0) {
+      tabla.innerHTML = `<tr><td colspan="5">No hay asistencias para esta materia.</td></tr>`;
+      console.debug('Asistencias completas recibidas:', asistencias);
+      return;
+    }
+
+    // Renderizar filas filtradas
+    filtradas.forEach(asistencia => {
+      // Intentamos extraer fecha si existe en distintos nombres
+      const fechaRaw = asistencia.fecha || asistencia.fecha_asistencia || asistencia.created_at || asistencia.date || null;
+      const fechaFormateada = fechaRaw ? new Date(fechaRaw).toLocaleDateString("es-AR") : "—";
+
+      // nombre de materia para mostrar
+      let nombreMateria = asistencia.materia || asistencia.nombre || asistencia.materia_nombre || "";
+      if (!nombreMateria && campoId) {
+        // si no hay nombre, podemos dejar el texto del select
+        nombreMateria = materiaSelect.options[materiaSelect.selectedIndex]?.text || "";
+      }
+
+      const fila = document.createElement("tr");
+      fila.innerHTML = `
+        <td>${asistencia.id ?? asistencia.id_asistencia ?? ""}</td>
+        <td>${nombreMateria}</td>
+        <td>${fechaFormateada}</td>
+        <td>${(asistencia.estado ?? asistencia.presente ?? asistencia.presencia) ? "Presente" : "Ausente"}</td>
+        <td><button class="error-btn" onclick="marcarError(${asistencia.id ?? asistencia.id_asistencia})">Reportar error</button></td>
+      `;
+      tabla.appendChild(fila);
+    });
+
+  } catch (error) {
+    console.error("Error al cargar asistencias:", error);
+    mensaje.textContent = "⚠️ Error al obtener tus asistencias.";
+  }
+}
     async function marcarError(id) {
       try {
         const confirmacion = confirm("¿Deseas reportar un error en esta asistencia?");
