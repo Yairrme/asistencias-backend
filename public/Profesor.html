@@ -116,6 +116,35 @@
       <div style="text-align:center; margin-top:12px;">
         <button class="cerrar-sesion" id="logoutBtn">Cerrar sesión</button>
       </div>
+
+<div id="modalEditar" style="
+  display:none;
+  position:fixed;
+  top:0; left:0;
+  width:100%; height:100%;
+  background:rgba(0,0,0,0.4);
+  justify-content:center;
+  align-items:center;
+">
+  <div style="
+    background:white;
+    padding:20px;
+    width:300px;
+    border-radius:10px;
+    text-align:center;
+  ">
+      <h3 id="modalTitulo"></h3>
+      <p>Selecciona el nuevo estado:</p>
+
+      <button id="btnModalPresente" style="margin:5px;">Presente</button>
+      <button id="btnModalAusente" style="margin:5px;">Ausente</button>
+
+      <div style="margin-top:10px;">
+        <button onclick="cerrarModal()" style="background:#999; color:white;">Cancelar</button>
+      </div>
+  </div>
+</div>
+
     </section>
   </main>
 
@@ -318,6 +347,36 @@
       }
     });
 
+    async function editarAsistencia(id_asistencia, estadoActual) {
+  const nuevoEstado = estadoActual === 1 ? 0 : 1;
+
+  const confirmar = confirm(
+    `¿Cambiar asistencia?\nActual: ${estadoActual ? "Presente" : "Ausente"}\nNuevo: ${nuevoEstado ? "Presente" : "Ausente"}`
+  );
+
+  if (!confirmar) return;
+
+  try {
+    const res = await fetch(`http://localhost:3000/api/asistencias/${id_asistencia}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ presente: nuevoEstado })
+    });
+
+    if (res.ok) {
+      alert("✔️ Asistencia actualizada");
+      // Recargar historial para ver el cambio
+      const materiaId = materiaSelect.value;
+      cargarFechasHistorial(materiaId);
+    } else {
+      alert("❌ Error al actualizar");
+    }
+  } catch (e) {
+    console.error(e);
+    alert("⚠️ Error en el servidor");
+  }
+}
+
     // Cargar fechas del historial de una materia
     async function cargarFechasHistorial(materiaId) {
       fechasContainer.innerHTML = "⏳ Cargando fechas...";
@@ -349,22 +408,51 @@
     }
 
     // Mostrar detalle por fecha
-    function mostrarDetalleFecha(item) {
-      detalleHistorial.innerHTML = `
-        <h3>🗓️ Asistencias del ${item.fecha}</h3>
-        <table border="1" cellspacing="0" cellpadding="5" style="width:100%; margin-top:10px;">
-          <tr><th>Alumno</th><th>Estado</th></tr>
-          ${item.alumnos.map(a => `
-            <tr>
-              <td>${a.apellido}, ${a.nombre}</td>
-              <td style="color:${a.presente ? 'green' : 'red'};">
-                ${a.presente ? 'Presente' : 'Ausente'}
-              </td>
-            </tr>
-          `).join('')}
-        </table>
-      `;
-    }
+function mostrarDetalleFecha(item) {
+  detalleHistorial.innerHTML = `
+    <h3>🗓️ Asistencias del ${item.fecha}</h3>
+    <table border="1" cellspacing="0" cellpadding="5" style="width:100%; margin-top:10px;">
+      <tr><th>Alumno</th><th>Estado</th><th>Editar</th></tr>
+    </table>
+  `;
+
+  const table = detalleHistorial.querySelector("table");
+
+  item.alumnos.forEach(a => {
+    // cada 'a' debe traer id_asistencia, nombre, apellido, presente
+    const tr = document.createElement("tr");
+
+    const tdAlumno = document.createElement("td");
+    tdAlumno.textContent = `${a.apellido}, ${a.nombre}`;
+
+    const tdEstado = document.createElement("td");
+    tdEstado.textContent = a.presente ? "Presente" : "Ausente";
+    tdEstado.style.color = a.presente ? "green" : "red";
+
+    const tdEditar = document.createElement("td");
+    const btn = document.createElement("button");
+    btn.textContent = "✏️ Editar";
+    btn.type = "button";
+    btn.dataset.idAsistencia = a.id_asistencia;
+    btn.dataset.nombre = a.nombre;
+    btn.dataset.apellido = a.apellido;
+    btn.dataset.presente = a.presente;
+    btn.addEventListener("click", () => {
+      abrirModal({
+        id_asistencia: btn.dataset.idAsistencia,
+        nombre: btn.dataset.nombre,
+        apellido: btn.dataset.apellido,
+        presente: Number(btn.dataset.presente)
+      });
+    });
+    tdEditar.appendChild(btn);
+
+    tr.appendChild(tdAlumno);
+    tr.appendChild(tdEstado);
+    tr.appendChild(tdEditar);
+    table.appendChild(tr);
+  });
+}
 
     document.getElementById("logoutBtn").addEventListener("click", () => {
       localStorage.removeItem("usuario");
@@ -462,6 +550,62 @@
       });
       doc.save("estadisticas_asistencia.pdf");
     });
+
+// modal state
+let asistenciaEditar = null;
+
+function abrirModal(asistencia) {
+  // asistencia: {id_asistencia, nombre, apellido, presente}
+  asistenciaEditar = asistencia;
+  document.getElementById("modalTitulo").textContent = `Editar asistencia de ${asistencia.apellido}, ${asistencia.nombre}`;
+  document.getElementById("modalEditar").style.display = "flex";
+}
+
+function cerrarModal() {
+  asistenciaEditar = null;
+  document.getElementById("modalEditar").style.display = "none";
+}
+
+// ligar botones
+document.getElementById("btnModalPresente").onclick = () => actualizarAsistenciaModal(1);
+document.getElementById("btnModalAusente").onclick = () => actualizarAsistenciaModal(0);
+
+async function actualizarAsistenciaModal(nuevoEstado) {
+  if (!asistenciaEditar) return;
+
+  // enviar id_profesor para que el backend valide; usamos el usuario almacenado
+  const idProfesor = usuario.id_profesor || usuario.id;
+
+  try {
+    const res = await fetch(`http://localhost:3000/api/asistencias/${asistenciaEditar.id_asistencia}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        presente: Number(nuevoEstado),
+        id_profesor: Number(idProfesor)
+      })
+    });
+
+    const data = await res.json().catch(() => null);
+
+    if (!res.ok) {
+      // mostrar mensaje de error más detallado si vino 'details' o 'error'
+      const msg = (data && (data.error || data.details || JSON.stringify(data))) || "Error al actualizar.";
+      alert("❌ " + msg);
+      console.error("PUT /api/asistencias/:id_asistencia ->", data);
+      return;
+    }
+
+    alert("✔️ Asistencia actualizada correctamente");
+    cerrarModal();
+    // recargo historial para refrescar vista
+    const materia = materiaSelect.value;
+    if (materia) cargarFechasHistorial(materia);
+  } catch (err) {
+    console.error("Error al conectar con el servidor al actualizar asistencia:", err);
+    alert("⚠️ Error de conexión al actualizar asistencia.");
+  }
+}
 
   </script>
 </body>

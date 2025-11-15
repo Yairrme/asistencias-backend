@@ -22,7 +22,9 @@ router.get("/estadisticas/:materiaId", getEstadisticasPorMateria);
 // Registrar una nueva asistencia
 router.post("/", createAsistencia);
 
-// Actualizar asistencia (solo el campo "presente")
+/* =========================================================
+   🔧 PATCH — ACTUALIZAR SOLO "presente"
+   ========================================================= */
 router.patch("/:id", async (req, res) => {
   const { id } = req.params;
   const { presente } = req.body;
@@ -52,10 +54,9 @@ router.patch("/:id", async (req, res) => {
   }
 });
 
-// Aceptar PUT que también actualiza el campo 'presente'
-router.put('/:id', updateAsistencia);
-
-// ✅ Obtener asistencias por materia (agrupadas por fecha)
+/* =========================================================
+   📌 GET — Asistencias por materia (AGRUPADAS POR FECHA)
+   ========================================================= */
 router.get("/por-materia/:materiaId", async (req, res) => {
   const { materiaId } = req.params;
 
@@ -81,28 +82,28 @@ router.get("/por-materia/:materiaId", async (req, res) => {
 
     // Agrupar asistencias por fecha
     const agrupado = rows.reduce((acc, row) => {
-      // row.fecha puede venir como Date o como string; manejamos ambos casos
       let fechaVal;
+
       if (row.fecha instanceof Date) {
         fechaVal = row.fecha.toISOString().split("T")[0];
-      } else if (row.fecha) {
-        // si viene "YYYY-MM-DD" o similar, dejamos la parte de fecha
-        fechaVal = String(row.fecha).split("T")[0];
       } else {
-        fechaVal = "Sin fecha";
+        fechaVal = String(row.fecha).split("T")[0];
       }
 
       if (!acc[fechaVal]) acc[fechaVal] = [];
+
       acc[fechaVal].push({
+        id_asistencia: row.id_asistencia,   // ← NECESARIO PARA EDITAR
         id_alumno: row.id_alumno,
         nombre: row.alumno_nombre,
         apellido: row.alumno_apellido,
         presente: row.presente,
       });
+
       return acc;
     }, {});
 
-    // Convertir a array
+    // Convertir a array para el frontend
     const resultado = Object.entries(agrupado).map(([fecha, alumnos]) => ({
       fecha,
       alumnos,
@@ -112,6 +113,69 @@ router.get("/por-materia/:materiaId", async (req, res) => {
   } catch (error) {
     console.error("Error al obtener historial por materia:", error);
     res.status(500).json({ error: "Error al obtener historial de asistencias" });
+  }
+});
+
+
+/* =========================================================
+   🔒 PUT — Edición segura SOLO PARA PROFESOR DE ESA MATERIA
+   ========================================================= */
+router.put("/:id_asistencia", async (req, res) => {
+  const { id_asistencia } = req.params;
+  const { presente, id_profesor } = req.body;
+
+  if (typeof presente === "undefined" || typeof id_profesor === "undefined") {
+    return res.status(400).json({ 
+      error: "Faltan campos: 'presente' e 'id_profesor' son obligatorios." 
+    });
+  }
+
+  try {
+    // 1) Verifico existencia de la asistencia y obtengo id_materia
+    const [rowsAsis] = await db.query(
+      "SELECT id_materia FROM asistencias WHERE id_asistencia = ?",
+      [id_asistencia]
+    );
+
+    if (!rowsAsis.length) {
+      return res.status(404).json({ error: "Asistencia no encontrada." });
+    }
+
+    const id_materia = rowsAsis[0].id_materia;
+
+    // 2) Verifico que la materia pertenezca al profesor
+    const [rowsMat] = await db.query(
+      "SELECT id_profesor FROM materias WHERE id_materia = ?",
+      [id_materia]
+    );
+
+    if (!rowsMat.length) {
+      return res.status(404).json({ error: "Materia no encontrada." });
+    }
+
+    if (Number(rowsMat[0].id_profesor) !== Number(id_profesor)) {
+      return res.status(403).json({
+        error: "No tienes permiso para editar esta asistencia.",
+      });
+    }
+
+    // 3) Actualizo la asistencia
+    const [result] = await db.query(
+      "UPDATE asistencias SET presente = ? WHERE id_asistencia = ?",
+      [Number(presente), id_asistencia]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(500).json({ error: "No se actualizó ninguna fila." });
+    }
+
+    res.json({ mensaje: "Asistencia actualizada correctamente." });
+  } catch (err) {
+    console.error("ERROR PUT /api/asistencias/:id_asistencia ->", err);
+    res.status(500).json({ 
+      error: "Error interno al actualizar asistencia", 
+      details: err.message 
+    });
   }
 });
 
